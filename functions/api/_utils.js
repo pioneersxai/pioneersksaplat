@@ -53,6 +53,14 @@ export function getCookie(request, name) {
   return m ? m[1] : null;
 }
 
+/* يتحقق أن المستخدم الحالي أدمن — يعيد المستخدم أو Response خطأ */
+export async function requireAdmin(request, env) {
+  const user = await getUser(request, env);
+  if (!user) return { error: json({ error: 'auth' }, 401) };
+  if (user.role !== 'admin') return { error: json({ error: 'forbidden' }, 403) };
+  return { user };
+}
+
 /* يعيد بيانات المستخدم الحالي من الجلسة — أو null */
 export async function getUser(request, env) {
   const token = getCookie(request, 'session');
