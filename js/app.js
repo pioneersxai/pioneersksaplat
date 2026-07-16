@@ -20,6 +20,12 @@ var currentTask = null;
    LIVE=false: الوضع التجريبي القديم كما هو (fallback آمن) */
 var LIVE = false;
 var SERVER_TASKS = [];
+var chatHistory = [];   /* تاريخ الحوار الحالي (BE-P2) */
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function textToHtml(s) { return escapeHtml(s).replace(/\n/g, '<br>'); }
 
 /* ================= i18n helpers ================= */
 function t(key) {
@@ -189,6 +195,7 @@ function openTask(task) {
   var txt = (state.lang === 'ar') ? task.ar : task.en;
   document.getElementById('topTitle').textContent = txt[0];
   document.getElementById('messages').innerHTML = '';
+  chatHistory = [];
   lockComposer(true);
 
   var intro = (state.lang === 'ar')
@@ -289,6 +296,37 @@ function buildFormCard(task) {
 }
 
 function submitForm(data) {
+  if (LIVE) {
+    aiMessage('⏳ ' + t('aiThinking'));
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId: currentTask.id, data: data, store: true })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok && !d.demo && d.content) {
+          chatHistory = d.history || [];
+          var res = document.createElement('div');
+          res.className = 'result-card';
+          res.innerHTML = '<span class="tag">' + t('aiResultTag') + '</span><br>' + textToHtml(d.content);
+          aiMessage(t('sentForReview'), res);
+          state.formDone = true;
+          lockComposer(false);
+        } else if (d.ok && d.demo) {
+          demoResult(data); /* لا مفتاح API بعد → القالب التجريبي */
+        } else {
+          aiMessage('⚠️ ' + t('aiError'));
+          lockComposer(false);
+        }
+      })
+      .catch(function () { aiMessage('⚠️ ' + t('aiError')); lockComposer(false); });
+    return;
+  }
+  demoResult(data);
+}
+
+function demoResult(data) {
   var tpl = (state.lang === 'ar') ? currentTask.result.ar : currentTask.result.en;
   var out = tpl.replace(/\{(\w+)\}/g, function (_, k) { return data[k] || '—'; });
 
@@ -315,6 +353,29 @@ function userSend() {
   if (!val) return;
   userMessage(val);
   inp.value = '';
+
+  if (LIVE) {
+    var msgs = chatHistory.concat([{ role: 'user', content: val }]);
+    aiMessage('⏳ ' + t('aiThinking'));
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId: currentTask.id, messages: msgs })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.ok && !d.demo && d.content) {
+          chatHistory = d.history || msgs;
+          aiMessage(textToHtml(d.content));
+        } else if (d.ok && d.demo) {
+          aiMessage(t('freeReply'));
+        } else {
+          aiMessage('⚠️ ' + t('aiError'));
+        }
+      })
+      .catch(function () { aiMessage('⚠️ ' + t('aiError')); });
+    return;
+  }
   setTimeout(function () { aiMessage(t('freeReply')); }, 500);
 }
 
