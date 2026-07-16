@@ -1,0 +1,113 @@
+/* ============================================================
+   i18n.js — Bilingual strings (AR default / EN toggle)
+   Prototype T1 — منصّة العمل الذكية
+   قرار UI-003: عربي RTL افتراضياً + مفتاح تبديل للإنجليزية LTR
+   ============================================================ */
+
+var STR = {
+  ar: {
+    loginTitle: 'منصّة العمل الذكية',
+    loginSub: 'سجّل دخولك للوصول إلى مهامك — كل قسم يرى مهامه فقط',
+    phName: 'اسم الموظف (تجريبي)',
+    loginBtn: 'تسجيل الدخول',
+    demoNote: '⚠️ نموذج تجريبي (Prototype T1) — كل البيانات وهمية للعرض فقط',
+    appName: 'منصّة العمل الذكية',
+    appTag: 'نسخة تجريبية T1',
+    newTask: '＋ مهمة جديدة',
+    prevChats: 'محادثاتي السابقة (تجريبي)',
+    hist1: 'رد على استفسار عميل — أمس',
+    hist2: 'تقرير نهاية اليوم — أمس',
+    hist3: 'تأكيد موعد — الأحد',
+    libTitle: 'مكتبة المهام',
+    libSub: 'هذه المهام المتاحة لقسمك. اختر مهمة — وسيرشدك المساعد خطوة بخطوة حتى تكتمل بالشكل المطلوب.',
+    logout: 'خروج',
+    hello: 'مرحباً',
+    phComposer: 'اكتب رسالتك...',
+    lockMsg: 'أكمل بيانات البطاقة أعلاه أولاً — لا يمكن المتابعة قبل استيفاء المطلوب',
+    composerNote: 'المساعد يعمل وفق تعليمات الإدارة المعتمدة — المخرَج النهائي يخضع للمراجعة',
+    assistant: 'المساعد',
+    you: 'أنت',
+    reqNote: 'كل الحقول المعلّمة بـ * إلزامية — زر الإرسال يفتح تلقائياً عند الاكتمال',
+    submit: 'إرسال البيانات',
+    hint: 'لن تتمكن من الإرسال قبل إكمال الحقول الإلزامية',
+    resultTag: 'المخرَج (نموذج تجريبي)',
+    afterSubmit: 'استلمت البيانات كاملة ✔ — هذا مخرَج تجريبي بالشكل الذي حدّدته تعليمات الإدارة:',
+    freeReply: 'تم التسجيل (تجريبي). في النسخة الفعلية سيتابع المساعد الحوار وفق الـ Schema المعتمدة.',
+    schemaTitle: 'بيانات إلزامية — Schema',
+    stepsPath: function (n) { return '🧭 مسار من ' + n + ' خطوات إلزامية'; },
+    lockedTitle: 'مهام أقسام أخرى',
+    lockedSub: 'غير متاحة لقسمك — تظهر فقط لأصحابها',
+    roleSelectLbl: 'القسم / الدور',
+
+    /* أسماء الأدوار — تُستخدم في شاشة الدخول والملف الشخصي */
+    role_reception: 'الاستقبال',
+    role_marketing: 'التسويق',
+    role_social: 'السوشيال ميديا',
+    role_website: 'المواقع والمتاجر',
+    role_stores: 'المستودعات',
+    role_hr: 'الموارد البشرية (HR)',
+    role_accounting: 'الحسابات',
+    role_admin: '⭐ الإدارة (Admin)',
+
+    /* الوضع الحي (Backend) */
+    phUser: 'اسم المستخدم',
+    phPass: 'كلمة المرور',
+    liveNote: '🔐 وضع حقيقي — الدخول بحسابك المسجَّل لدى الإدارة',
+    needSetupNote: '⚙️ القاعدة جاهزة لكن بلا حسابات — أنشئ حساب المدير من صفحة setup.html',
+    loginFail: 'اسم المستخدم أو كلمة المرور غير صحيحة — أو الحساب موقوف',
+    loggingIn: 'جارٍ الدخول...'
+  },
+
+  en: {
+    loginTitle: 'Smart Work Platform',
+    loginSub: 'Sign in to access your tasks — each department sees only its own tasks',
+    phName: 'Employee name (demo)',
+    loginBtn: 'Sign in',
+    demoNote: '⚠️ Prototype T1 — all data is dummy, for demo only',
+    appName: 'Smart Work Platform',
+    appTag: 'Prototype T1',
+    newTask: '＋ New Task',
+    prevChats: 'My previous chats (demo)',
+    hist1: 'Customer inquiry reply — yesterday',
+    hist2: 'End-of-day report — yesterday',
+    hist3: 'Appointment confirmation — Sunday',
+    libTitle: 'Task Library',
+    libSub: 'These are the tasks available for your department. Pick one — the assistant will guide you step by step until it is complete.',
+    logout: 'Logout',
+    hello: 'Welcome',
+    phComposer: 'Type your message...',
+    lockMsg: 'Complete the card above first — you cannot continue before providing what is required',
+    composerNote: 'The assistant follows approved management instructions — final output is subject to review',
+    assistant: 'Assistant',
+    you: 'You',
+    reqNote: 'All fields marked * are required — Send unlocks automatically when complete',
+    submit: 'Submit data',
+    hint: 'You cannot submit before completing the required fields',
+    resultTag: 'Output (demo sample)',
+    afterSubmit: 'All data received ✔ — here is a demo output in the exact format defined by management instructions:',
+    freeReply: 'Noted (demo). In the real version the assistant continues the dialogue according to the approved schema.',
+    schemaTitle: 'Required data — Schema',
+    stepsPath: function (n) { return '🧭 ' + n + '-step mandatory path'; },
+    lockedTitle: "Other departments' tasks",
+    lockedSub: 'Not available to your department — visible only to their owners',
+    roleSelectLbl: 'Department / Role',
+
+    /* Role names — used on login screen and profile */
+    role_reception: 'Reception',
+    role_marketing: 'Marketing',
+    role_social: 'Social Media',
+    role_website: 'Websites & Stores',
+    role_stores: 'Warehouses',
+    role_hr: 'Human Resources (HR)',
+    role_accounting: 'Accounting',
+    role_admin: '⭐ Management (Admin)',
+
+    /* Live (Backend) mode */
+    phUser: 'Username',
+    phPass: 'Password',
+    liveNote: '🔐 Live mode — sign in with your registered account',
+    needSetupNote: '⚙️ Database ready but empty — create the admin account via setup.html',
+    loginFail: 'Wrong username or password — or account suspended',
+    loggingIn: 'Signing in...'
+  }
+};

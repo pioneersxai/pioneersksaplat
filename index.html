@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منصّة العمل الذكية — Prototype T1</title>
+  <link rel="icon" href="data:,"><!-- تبويب فارغ عمداً — الشعار العريض لا يصلح كأيقونة تبويب -->
+
+  <!-- Professional Arabic/Latin font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Styles: base (variables/reset/themes) → layout (shell) → components (cards/forms/chat) -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+
+  <!-- ===================== LOGIN ===================== -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="logo login-logo">
+        <span class="logo-fallback">⚙</span>
+        <img src="logo.png" alt="Logo" onload="this.parentElement.classList.add('has-img')">
+      </div>
+      <h1 data-i18n="loginTitle">منصّة العمل الذكية</h1>
+      <p data-i18n="loginSub">سجّل دخولك للوصول إلى مهامك — كل قسم يرى مهامه فقط</p>
+      <input type="text" id="empName" data-i18n-ph="phName" placeholder="اسم الموظف (تجريبي)">
+      <input type="password" id="empPass" data-i18n-ph="phPass" placeholder="كلمة المرور" style="display:none" autocomplete="current-password">
+      <div id="roleWrap">
+      <label class="role-lbl" data-i18n="roleSelectLbl">القسم / الدور</label>
+      <select id="empRole" class="role-select">
+        <option value="reception" data-i18n="role_reception">الاستقبال</option>
+        <option value="marketing" data-i18n="role_marketing">التسويق</option>
+        <option value="social" data-i18n="role_social">السوشيال ميديا</option>
+        <option value="website" data-i18n="role_website">المواقع والمتاجر</option>
+        <option value="stores" data-i18n="role_stores">المستودعات</option>
+        <option value="hr" data-i18n="role_hr">الموارد البشرية (HR)</option>
+        <option value="accounting" data-i18n="role_accounting">الحسابات</option>
+        <option value="admin" data-i18n="role_admin">⭐ الإدارة (Admin)</option>
+      </select>
+      </div>
+      <button class="btn-primary" id="loginBtn" data-i18n="loginBtn">تسجيل الدخول</button>
+      <div class="demo-note" id="modeNote" data-i18n="demoNote">⚠️ نموذج تجريبي (Prototype T1) — كل البيانات وهمية للعرض فقط</div>
+    </div>
+  </div>
+
+  <!-- ===================== APP ===================== -->
+  <div id="app">
+    <aside>
+      <div class="side-head">
+        <div class="logo">
+          <span class="logo-fallback">⚙</span>
+          <img src="logo.png" alt="Logo" onload="this.parentElement.classList.add('has-img')">
+        </div>
+        <div>
+          <strong data-i18n="appName">منصّة العمل الذكية</strong>
+          <small data-i18n="appTag">نسخة تجريبية T1</small>
+        </div>
+      </div>
+      <button class="new-task-btn" id="newTaskBtn" data-i18n="newTask">＋ مهمة جديدة</button>
+      <div class="side-label" data-i18n="prevChats">محادثاتي السابقة (تجريبي)</div>
+      <div class="chat-history">
+        <div class="chat-item">💬 <span data-i18n="hist1">رد على استفسار عميل — أمس</span></div>
+        <div class="chat-item">💬 <span data-i18n="hist2">تقرير نهاية اليوم — أمس</span></div>
+        <div class="chat-item">💬 <span data-i18n="hist3">تأكيد موعد — الأحد</span></div>
+      </div>
+      <div class="side-foot">
+        <div class="avatar" id="userAvatar">م</div>
+        <div><b id="userNameLbl">موظف</b><small id="userRoleLbl">—</small></div>
+      </div>
+    </aside>
+
+    <div class="scrim" id="scrim"></div>
+
+    <main>
+      <div class="topbar">
+        <button class="burger" id="burgerBtn" aria-label="القائمة">☰</button>
+        <h2 id="topTitle" data-i18n="libTitle">مكتبة المهام</h2>
+        <div class="top-actions">
+          <button class="chip-btn" id="langBtn">EN</button>
+          <button class="chip-btn" id="themeBtn">🌙</button>
+          <button class="chip-btn" id="logoutBtn" data-i18n="logout">خروج</button>
+        </div>
+      </div>
+
+      <!-- ========== Library ========== -->
+      <div id="libraryView">
+        <div class="lib-hero">
+          <div class="role-badge" id="roleBadge">👤 —</div>
+          <h3 id="helloLbl">مرحباً 👋</h3>
+          <p data-i18n="libSub">هذه المهام المتاحة لقسمك. اختر مهمة — وسيرشدك المساعد خطوة بخطوة حتى تكتمل بالشكل المطلوب.</p>
+        </div>
+        <div class="task-grid" id="taskGrid"></div>
+      </div>
+
+      <!-- ========== Chat ========== -->
+      <div id="chatView">
+        <div class="messages" id="messages"></div>
+        <div class="composer">
+          <div class="lock-banner" id="lockBanner">🔒 <span data-i18n="lockMsg">أكمل بيانات البطاقة أعلاه أولاً — لا يمكن المتابعة قبل استيفاء المطلوب</span></div>
+          <div class="composer-inner">
+            <textarea id="composerInput" data-i18n-ph="phComposer" placeholder="اكتب رسالتك..." disabled></textarea>
+            <button class="send" id="sendBtn" disabled>➤</button>
+          </div>
+          <div class="composer-note" data-i18n="composerNote">المساعد يعمل وفق تعليمات الإدارة المعتمدة — المخرَج النهائي يخضع للمراجعة</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts: i18n (strings) → data (demo tasks) → app (logic/events) -->
+  <script src="js/i18n.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

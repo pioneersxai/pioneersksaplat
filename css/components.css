@@ -1,0 +1,206 @@
+/* ============================================================
+   components.css — Task cards · Chat messages · Schema form cards
+   ملوَّنة بدرجات شعار Pioneers فقط (--brand-*)
+   Prototype T1 — منصّة العمل الذكية
+   ============================================================ */
+
+/* ===== Task library ===== */
+.lib-hero h3{ font-size:22px; margin-bottom:6px; font-weight:800; }
+.lib-hero p{ color:var(--text-2); font-size:14px; margin-bottom:26px; }
+
+.role-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--grad-brand); color:#fff;
+  border-radius:20px; padding:5px 14px;
+  font-size:12px; font-weight:700;
+  margin-bottom:14px;
+}
+
+.task-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:16px;
+}
+.task-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:20px;
+  cursor:pointer;
+  transition:transform .15s, box-shadow .15s;
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+}
+/* شريط علوي بدرجات الشعار — يتناوب بين ثلاث درجات */
+.task-card::before{
+  content:'';
+  position:absolute; top:0; inset-inline:0;
+  height:4px;
+  background:var(--brand-700);
+}
+.task-card:nth-child(3n+2)::before{ background:var(--brand-500); }
+.task-card:nth-child(3n)::before{ background:var(--brand-300); }
+
+.task-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 8px 22px rgba(9,55,52,.16);
+  border-color:var(--brand-300);
+}
+/* أيقونة داخل رقعة ملوَّنة بدرجات الشعار — تتناوب أيضاً */
+.task-card .icon{
+  font-size:24px;
+  width:48px; height:48px;
+  border-radius:13px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--brand-100);
+  margin-bottom:12px;
+}
+.task-card:nth-child(3n+2) .icon{ background:var(--accent-soft); }
+.task-card:nth-child(3n) .icon{ background:var(--brand-100); }
+
+.task-card h4{ font-size:15px; margin-bottom:6px; font-weight:700; }
+.task-card p{ font-size:12.5px; color:var(--text-2); line-height:1.5; }
+.task-card .steps{ margin-top:12px; font-size:11px; color:var(--brand-500); font-weight:700; }
+.task-card.locked{ opacity:.5; cursor:not-allowed; }
+.task-card.locked::before{ background:var(--border); }
+.task-card.locked:hover{ transform:none; border-color:var(--border); box-shadow:var(--shadow); }
+
+/* ===== Chat messages ===== */
+.messages{ flex:1; overflow-y:auto; padding:28px 0; }
+.msg-row{
+  max-width:760px;
+  margin:0 auto 22px;
+  padding:0 24px;
+  display:flex; gap:12px;
+}
+.msg-avatar{
+  width:32px; height:32px; border-radius:8px;
+  flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px;
+}
+.msg-avatar.ai{ background:var(--grad-brand); color:#fff; }
+.msg-avatar.user{ background:var(--brand-100); color:var(--brand-700); font-weight:700; }
+.msg-body{ font-size:14.5px; line-height:1.75; padding-top:4px; min-width:0; flex:1; }
+.msg-body .name{ font-size:12px; color:var(--text-2); margin-bottom:3px; }
+
+/* ===== Schema form card (enforced inputs inside chat) ===== */
+.form-card{
+  background:var(--surface);
+  border:1.5px solid var(--brand-500);
+  border-radius:var(--radius);
+  padding:20px;
+  margin-top:12px;
+  box-shadow:var(--shadow);
+}
+.form-card h5{ font-size:14px; margin-bottom:4px; display:flex; align-items:center; gap:8px; color:var(--brand-700); }
+[data-theme="dark"] .form-card h5{ color:var(--brand-300); }
+.form-card .req-note{ font-size:11.5px; color:var(--warn); margin-bottom:14px; }
+
+.field{ margin-bottom:14px; }
+.field label{ display:block; font-size:12.5px; font-weight:700; margin-bottom:6px; }
+.field label .star{ color:var(--danger); }
+.field input, .field select, .field textarea{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--bg); color:var(--text);
+  font-size:13.5px;
+}
+.field input:focus, .field select:focus, .field textarea:focus{
+  outline:none;
+  border-color:var(--brand-500);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+.field textarea{ resize:vertical; min-height:64px; }
+.field .valid-mark{ color:var(--ok); font-size:12px; display:none; }
+.field.done .valid-mark{ display:inline; }
+
+.form-progress{
+  height:6px;
+  background:var(--bg);
+  border-radius:6px;
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.form-progress i{
+  display:block; height:100%; width:0%;
+  background:linear-gradient(90deg, var(--brand-500), var(--brand-300));
+  border-radius:6px;
+  transition:width .3s;
+}
+.form-submit{ width:100%; }
+.form-hint{ font-size:11.5px; color:var(--text-2); text-align:center; margin-top:8px; }
+
+/* ===== Result card ===== */
+.result-card{
+  background:var(--accent-soft);
+  border:1px solid var(--brand-300);
+  border-radius:var(--radius);
+  padding:18px;
+  margin-top:12px;
+  font-size:13.5px; line-height:1.8;
+}
+.result-card .tag{
+  display:inline-block;
+  background:var(--grad-brand); color:#fff;
+  font-size:11px; border-radius:6px;
+  padding:2px 10px; margin-bottom:8px;
+  font-weight:700;
+}
+
+/* ===== Composer ===== */
+.composer{
+  border-top:1px solid var(--border);
+  background:var(--surface);
+  padding:14px 24px 18px;
+}
+.composer-inner{
+  max-width:760px; margin:0 auto;
+  display:flex; gap:10px; align-items:flex-end;
+}
+.composer textarea{
+  flex:1;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:14px;
+  background:var(--bg); color:var(--text);
+  resize:none; height:48px;
+}
+.composer textarea:focus{
+  outline:none;
+  border-color:var(--brand-500);
+}
+.composer .send{
+  background:var(--grad-brand);
+  border:none; color:#fff;
+  width:44px; height:44px;
+  border-radius:11px; font-size:17px;
+  flex-shrink:0;
+}
+.composer .send:disabled{ opacity:.4; cursor:not-allowed; }
+.composer-note{
+  max-width:760px; margin:8px auto 0;
+  font-size:11px; color:var(--text-2); text-align:center;
+}
+.lock-banner{
+  max-width:760px; margin:0 auto 10px;
+  background:var(--accent-soft);
+  border:1px dashed var(--brand-500);
+  color:var(--brand-700);
+  font-size:12px; border-radius:10px;
+  padding:8px 14px;
+  display:none; align-items:center; gap:8px;
+}
+[data-theme="dark"] .lock-banner{ color:var(--brand-300); }
+.lock-banner.show{ display:flex; }
+
+/* ===== 📱 الجوال ===== */
+@media (max-width:860px){
+  .task-grid{ grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .task-card{ padding:16px 14px; }
+  .lib-hero h3{ font-size:19px; }
+}

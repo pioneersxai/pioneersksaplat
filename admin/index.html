@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم — منصّة العمل الذكية · Prototype T1</title>
+  <link rel="icon" href="data:,"><!-- تبويب فارغ عمداً -->
+
+  <!-- Professional Arabic/Latin font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Reuse platform design system + admin-specific styles -->
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div id="adminApp">
+  <!-- ===== Admin Sidebar ===== -->
+  <aside class="admin-side">
+    <div class="side-head">
+      <div class="logo">
+        <span class="logo-fallback">⚙</span>
+        <img src="../logo.png" alt="Logo" onload="this.parentElement.classList.add('has-img')">
+      </div>
+      <div>
+        <strong>لوحة التحكم</strong>
+        <small>منصّة العمل الذكية · T1</small>
+      </div>
+    </div>
+    <nav class="admin-nav">
+      <button class="nav-item active" data-view="overview">📊 <span>نظرة عامة</span></button>
+      <button class="nav-item" data-view="tasks">🧭 <span>المهام والـ Schemas</span></button>
+      <button class="nav-item" data-view="employees">👥 <span>الموظفون والأقسام</span></button>
+      <button class="nav-item" data-view="review">✅ <span>مراجعة المخرجات</span> <b class="badge" id="reviewBadge">3</b></button>
+    </nav>
+    <div class="side-foot">
+      <div class="avatar">ع</div>
+      <div><b>صاحب العمل</b><small>Admin (تجريبي)</small></div>
+    </div>
+  </aside>
+
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ===== Main ===== -->
+  <main class="admin-main">
+    <div class="topbar">
+      <button class="burger" id="burgerBtn" aria-label="القائمة">☰</button>
+      <h2 id="viewTitle">نظرة عامة</h2>
+      <div class="top-actions">
+        <button class="chip-btn" id="themeBtn">🌙</button>
+        <a class="chip-btn" href="../index.html">↗ واجهة الموظف</a>
+      </div>
+    </div>
+
+    <!-- ========== Overview ========== -->
+    <section id="view-overview" class="admin-view active">
+      <div class="demo-banner">⚠️ كل الأرقام والأسماء في هذه اللوحة <b>وهمية للعرض فقط</b> — Prototype T1</div>
+      <div class="stat-grid">
+        <div class="stat-tile"><span class="stat-num" id="statTasks">—</span><span class="stat-lbl">مهام مفعّلة</span></div>
+        <div class="stat-tile"><span class="stat-num" id="statRoles">—</span><span class="stat-lbl">أقسام</span></div>
+        <div class="stat-tile"><span class="stat-num" id="statEmps">—</span><span class="stat-lbl">موظفون</span></div>
+        <div class="stat-tile warn"><span class="stat-num" id="statPending">—</span><span class="stat-lbl">مخرجات بانتظار مراجعتك</span></div>
+      </div>
+      <h3 class="sec-title">آخر النشاط (تجريبي)</h3>
+      <div class="activity-list" id="activityList"></div>
+    </section>
+
+    <!-- ========== Tasks & Schemas ========== -->
+    <section id="view-tasks" class="admin-view">
+      <div class="view-head">
+        <p class="view-sub">هنا تتحكم في «الممر الإجباري»: كل مهمة = تعليمات للنموذج + Schema حقول إلزامية.</p>
+        <button class="btn-primary slim" id="newTaskAdminBtn">＋ مهمة جديدة</button>
+      </div>
+      <div class="tasks-layout">
+        <div class="tasks-list" id="adminTaskList"></div>
+        <div class="task-builder" id="taskBuilder">
+          <div class="builder-empty" id="builderEmpty">⬆ اختر مهمة من القائمة لتحريرها — أو أنشئ مهمة جديدة</div>
+          <div id="builderForm" style="display:none">
+            <h3 class="sec-title">تحرير المهمة</h3>
+            <div class="b-field"><label>اسم المهمة</label><input type="text" id="bName"></div>
+            <div class="b-row">
+              <div class="b-field"><label>الأيقونة</label><input type="text" id="bIcon" maxlength="2"></div>
+              <div class="b-field"><label>القسم المسموح له</label>
+                <select id="bRole">
+                  <option value="reception">الاستقبال</option>
+                  <option value="marketing">التسويق</option>
+                  <option value="social">السوشيال ميديا</option>
+                  <option value="website">المواقع والمتاجر</option>
+                  <option value="stores">المستودعات</option>
+                  <option value="hr">الموارد البشرية (HR)</option>
+                  <option value="accounting">الحسابات</option>
+                </select>
+              </div>
+            </div>
+            <div class="b-field">
+              <label>تعليمات النموذج (System Instructions) 🔒</label>
+              <textarea id="bInstructions" rows="4" placeholder="التعليمات التي تحكم سلوك النموذج في هذه المهمة — لا يراها الموظف أبداً"></textarea>
+              <small class="b-hint">لا يراها الموظف — تُخزَّن في الخادم فقط في النسخة الفعلية</small>
+            </div>
+            <h4 class="sec-title sm">حقول الـ Schema الإلزامية</h4>
+            <div id="fieldsList"></div>
+            <button class="chip-btn" id="addFieldBtn">＋ إضافة حقل</button>
+            <div class="builder-actions">
+              <button class="btn-primary slim" id="saveTaskBtn">حفظ (تجريبي)</button>
+              <button class="chip-btn danger" id="disableTaskBtn">تعطيل المهمة</button>
+            </div>
+          </div>
+        </div>
+        <div class="task-preview">
+          <h4 class="sec-title sm">👁 معاينة حية — كما يراها الموظف</h4>
+          <div id="livePreview" class="preview-box"><div class="builder-empty">المعاينة تظهر عند اختيار مهمة</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== Employees & Roles ========== -->
+    <section id="view-employees" class="admin-view">
+      <p class="view-sub">كل موظف يُربط بقسم واحد — والقسم يحدد المهام التي يراها في مكتبته.</p>
+      <table class="emp-table">
+        <thead><tr><th>الموظف</th><th>القسم</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="empTableBody"></tbody>
+      </table>
+      <button class="chip-btn" id="addEmpBtn">＋ إضافة موظف (تجريبي)</button>
+    </section>
+
+    <!-- ========== Review Queue ========== -->
+    <section id="view-review" class="admin-view">
+      <p class="view-sub">مخرجات الموظفين بانتظار قرارك — لا يُعتمد أي مخرَج تلقائياً (مراجعة بشرية إلزامية).</p>
+      <div id="reviewList"></div>
+    </section>
+  </main>
+</div>
+
+<script src="../js/admin-data.js"></script>
+<script src="../js/admin.js"></script>
+</body>
+</html>

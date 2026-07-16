@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الإعداد الأول — منصّة العمل الذكية</title>
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo login-logo">
+      <span class="logo-fallback">⚙</span>
+      <img src="logo.png" alt="Logo" onload="this.parentElement.classList.add('has-img')">
+    </div>
+    <h1>الإعداد الأول للمنصّة</h1>
+    <p>ينشئ حساب المدير (Admin) ويزرع المهام الافتراضية — <b>يعمل مرة واحدة فقط</b> ثم يتعطل نهائياً.</p>
+
+    <input type="text" id="sName" placeholder="اسمك الكامل">
+    <input type="text" id="sUser" placeholder="اسم المستخدم (إنجليزي — مثال: alaa)" autocomplete="off">
+    <input type="password" id="sPass" placeholder="كلمة المرور (8 أحرف على الأقل)">
+    <input type="password" id="sPass2" placeholder="تأكيد كلمة المرور">
+
+    <button class="btn-primary" id="setupBtn">إنشاء الحساب وتجهيز القاعدة</button>
+    <div class="demo-note" id="setupMsg">🔒 كلمة المرور تُخزَّن مشفّرة (PBKDF2) — لا تُحفظ نصاً أبداً</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var btn = document.getElementById('setupBtn');
+  var msg = document.getElementById('setupMsg');
+
+  function say(text, isError) {
+    msg.textContent = text;
+    msg.style.color = isError ? 'var(--danger)' : 'var(--text-2)';
+  }
+
+  var ERRORS = {
+    already_setup: 'المنصّة مُعدَّة مسبقاً — هذه الصفحة تعمل مرة واحدة فقط. اذهب لصفحة الدخول.',
+    name_short: 'الاسم قصير جداً.',
+    bad_username: 'اسم المستخدم: 3–30 حرفاً إنجليزياً/أرقام/نقطة/شرطة فقط.',
+    password_short: 'كلمة المرور 8 أحرف على الأقل.',
+    no_db: 'قاعدة البيانات غير مربوطة بعد — راجع خطوات الربط في Cloudflare.',
+    db_not_ready: 'الجداول غير منشأة — الصق schema.sql في Console القاعدة أولاً.'
+  };
+
+  btn.addEventListener('click', function () {
+    var name = document.getElementById('sName').value.trim();
+    var user = document.getElementById('sUser').value.trim();
+    var p1 = document.getElementById('sPass').value;
+    var p2 = document.getElementById('sPass2').value;
+
+    if (p1 !== p2) { say('كلمتا المرور غير متطابقتين.', true); return; }
+
+    btn.disabled = true;
+    say('جارٍ الإنشاء...');
+
+    fetch('/api/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, username: user, password: p1 })
+    })
+    .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+    .then(function (res) {
+      if (res.d && res.d.ok) {
+        say('✔ تم! أُنشئ حسابك وزُرعت ' + res.d.seeded + ' مهمة. جارٍ تحويلك لصفحة الدخول...');
+        setTimeout(function () { window.location.href = 'index.html'; }, 1800);
+      } else {
+        say(ERRORS[res.d.error] || ('خطأ: ' + res.d.error), true);
+        btn.disabled = false;
+      }
+    })
+    .catch(function () {
+      say('تعذر الوصول للخادم — تأكد أن الملفات منشورة على Cloudflare (لا يعمل محلياً بدون خادم).', true);
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>

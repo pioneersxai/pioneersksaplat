@@ -1,0 +1,158 @@
+/* ============================================================
+   base.css — Design tokens (CSS Variables) · Reset · Themes · Logo
+   Prototype T1 — منصّة العمل الذكية
+
+   🎨 الباليت مستخرج من ألوان شعار Pioneers (درجات التيل):
+   لتعديل أي درجة عدّل قيم --brand-* هنا فقط — كل الواجهة تتبعها.
+   ============================================================ */
+
+:root{
+  /* درجات الشعار — من الأغمق للأفتح */
+  --brand-900:#093734;
+  --brand-700:#0e6f68;   /* اللون الأساسي (لون كلمة PIONEERS) */
+  --brand-500:#17958c;   /* التيل المتوسط */
+  --brand-300:#5cc9be;   /* الأكوا الفاتح (تدرج الأيقونة) */
+  --brand-100:#d7f0ed;   /* أفتح درجة — خلفيات وشارات */
+
+  --bg:#f3f9f8;
+  --surface:#ffffff;
+  --border:#dcebe9;
+  --text:#0f2e2b;
+  --text-2:#5c7370;
+  --accent:var(--brand-700);
+  --accent-soft:#e2f3f1;
+
+  /* ألوان الحالات الوظيفية (نجاح/تحذير/خطأ) — تبقى مميزة للسلامة */
+  --ok:#178c54;
+  --warn:#d97706;
+  --danger:#dc2626;
+
+  --grad-brand:linear-gradient(135deg, var(--brand-700), var(--brand-500));
+  --radius:14px;
+  --shadow:0 1px 3px rgba(9,55,52,.08);
+}
+
+/* Dark theme — toggled via data-theme="dark" on <body> */
+[data-theme="dark"]{
+  --brand-100:#123430;
+
+  --bg:#0c1917;
+  --surface:#12231f;
+  --border:#21403b;
+  --text:#e6f2f0;
+  --text-2:#8fa9a5;
+  --accent:#3fc0b3;
+  --accent-soft:#123430;
+
+  --grad-brand:linear-gradient(135deg, #14857c, #3fc0b3);
+  --shadow:0 1px 3px rgba(0,0,0,.45);
+}
+
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  font-family:'Cairo',"Segoe UI",Tahoma,Arial,sans-serif;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+  transition:background .25s, color .25s;
+}
+
+button{ font-family:inherit; cursor:pointer; }
+
+.btn-primary{
+  background:var(--grad-brand);
+  color:#fff;
+  border:none;
+  border-radius:10px;
+  padding:12px;
+  font-size:15px;
+  font-weight:700;
+  transition:filter .15s, transform .1s;
+}
+.btn-primary:hover:not(:disabled){ filter:brightness(1.09); }
+.btn-primary:active:not(:disabled){ transform:scale(.985); }
+.btn-primary:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* ============ Burger + Scrim (قائمة الجوال) ============ */
+.burger{
+  display:none;
+  align-items:center; justify-content:center;
+  width:40px; height:40px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:19px;
+  flex-shrink:0;
+}
+.scrim{
+  position:fixed; inset:0;
+  background:rgba(9,55,52,.5);
+  opacity:0; pointer-events:none;
+  transition:opacity .2s;
+  z-index:40;
+}
+.scrim.show{ opacity:1; pointer-events:auto; }
+@media (max-width:860px){
+  .burger{ display:inline-flex; }
+}
+
+/* ============ Logo ============
+   يعرض logo.png من جذر المشروع تلقائياً؛
+   وإن لم يوجد الملف يبقى الرمز الاحتياطي ⚙
+   الشعار العريض (Wordmark) يُعرض كبيراً بلا صندوق حوله */
+.logo{
+  width:52px; height:52px;
+  border-radius:14px;
+  background:var(--grad-brand);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:26px; font-weight:700;
+  margin:0 auto;
+  overflow:hidden;
+  flex-shrink:0;
+}
+.logo img{
+  display:none;
+  width:100%; height:100%;
+  object-fit:contain;
+}
+.logo.has-img .logo-fallback{ display:none; }
+.logo.has-img img{ display:block; }
+
+/* عند تحميل الشعار: يتحرر من المربع ويُعرض بحجمه العريض */
+.logo.has-img{
+  width:auto;
+  background:transparent;
+  border:none;
+  border-radius:10px;
+}
+
+/* شعار شاشة الدخول — كبير وبارز بعرض البطاقة */
+.login-card .login-logo.has-img{
+  width:100%;
+  max-width:270px;
+  height:96px;
+  margin:0 auto 6px;
+}
+
+/* شعار الشريط الجانبي (واجهة الموظف + لوحة الأدمن) — عريض وواضح */
+.side-head .logo.has-img,
+.admin-side .side-head .logo.has-img{
+  width:auto;
+  max-width:160px;
+  height:44px;
+  margin:0;
+}
+
+/* في الوضع الداكن: خلفية بيضاء خفيفة خلف الشعار حتى يبقى مقروءاً */
+[data-theme="dark"] .logo.has-img{
+  background:#fff;
+  padding:4px 8px;
+}
