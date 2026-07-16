@@ -55,7 +55,11 @@ var STR = {
     liveNote: '🔐 وضع حقيقي — الدخول بحسابك المسجَّل لدى الإدارة',
     needSetupNote: '⚙️ القاعدة جاهزة لكن بلا حسابات — أنشئ حساب المدير من صفحة setup.html',
     loginFail: 'اسم المستخدم أو كلمة المرور غير صحيحة — أو الحساب موقوف',
-    loggingIn: 'جارٍ الدخول...'
+    loggingIn: 'جارٍ الدخول...',
+    aiThinking: 'المساعد يعمل على مهمتك...',
+    aiResultTag: 'المخرَج — بانتظار مراجعة الإدارة',
+    sentForReview: 'اكتملت البيانات ✔ نفّذت المهمة وفق تعليمات الإدارة، وأرسلت المخرَج لطابور المراجعة. يمكنك طلب تعديلات بالكتابة أدناه:',
+    aiError: 'تعذر إتمام الطلب — حاول مرة أخرى، وإن تكرر أبلغ الإدارة'
   },
 
   en: {
@@ -108,6 +112,10 @@ var STR = {
     liveNote: '🔐 Live mode — sign in with your registered account',
     needSetupNote: '⚙️ Database ready but empty — create the admin account via setup.html',
     loginFail: 'Wrong username or password — or account suspended',
-    loggingIn: 'Signing in...'
+    loggingIn: 'Signing in...',
+    aiThinking: 'The assistant is working on your task...',
+    aiResultTag: 'Output — pending management review',
+    sentForReview: 'Data complete ✔ Task executed per management instructions; the output was sent to the review queue. You can request changes below:',
+    aiError: 'Request failed — try again, and report to management if it persists'
   }
 };
