@@ -146,10 +146,14 @@ button{ font-family:inherit; cursor:pointer; }
 .side-head .logo.has-img,
 .admin-side .side-head .logo.has-img{
   width:auto;
-  max-width:160px;
-  height:44px;
-  margin:0;
+  max-width:185px;
+  height:50px;
+  margin:0 auto;
 }
+
+/* عند تحميل الشعار العريض: يُخفى النص المجاور (الشعار يغني عنه) ويتوسط الشعار */
+.side-head:has(.logo.has-img){ justify-content:center; }
+.side-head:has(.logo.has-img) > div:not(.logo){ display:none; }
 
 /* في الوضع الداكن: خلفية بيضاء خفيفة خلف الشعار حتى يبقى مقروءاً */
 [data-theme="dark"] .logo.has-img{
