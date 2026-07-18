@@ -121,6 +121,75 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: true });
   }
 
+  /* ===== استيراد حزمة معتمدة (تحميل ملفات العقول) =====
+     كل ملف: يُفحص بالبوابة (التجاوز الجماعي بقرار المالك يُسجَّل لكل ملف) ·
+     Supersession آلي · ربط صريح بالعقول حسب تعليمات التحميل (link_to). */
+  if (body.action === 'import_bundle') {
+    if (!Array.isArray(body.files) || !body.files.length) return json({ error: 'empty_bundle' }, 400);
+    if (body.files.length > 60) return json({ error: 'too_many' }, 400);
+
+    const report = [];
+    for (const item of body.files) {
+      const r = { name: item.name || '؟' };
+      const v = validate(item);
+      if (v) { r.ok = false; r.msg = v.msg; report.push(r); continue; }
+
+      const hits = gateScan(String(item.name) + '\n' + String(item.content));
+      if (hits.length && !body.gate_override) {
+        r.ok = false; r.msg = 'gate_blocked: ' + hits.map(h => h.type).join('،');
+        report.push(r); continue;
+      }
+      if (hits.length) {
+        await env.DB.prepare(
+          'INSERT INTO access_logs (mind_id, actor, file_id, action) VALUES (NULL, ?1, NULL, ?2)'
+        ).bind(g.user.username, 'gate-override(bundle): ' + String(item.name).slice(0, 80)).run();
+      }
+
+      const fid = crypto.randomUUID();
+      const sup = normList(item.supersedes) || '["-"]';
+      const inh = normList(item.inherits_to);
+      await env.DB.prepare(
+        'INSERT INTO files (id, name, stage, stage_version, status, supersedes, layer, inherits_to, surface_sensitivity, surface_scope, parent_decision, source_of, content) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)'
+      ).bind(
+        fid, String(item.name).trim(), item.stage, (item.stage_version || '-'), item.status,
+        sup, String(item.layer).trim(), inh, item.surface_sensitivity,
+        (item.surface_scope || '-'), String(item.parent_decision).trim(), null, String(item.content)
+      ).run();
+
+      /* Supersession آلي */
+      let superseded = 0;
+      try {
+        for (const ref of JSON.parse(sup)) {
+          if (ref && ref !== '-') {
+            const u = await env.DB.prepare(
+              "UPDATE files SET status = 'Superseded', updated_at = date('now') WHERE name = ?1 AND status = 'Active' AND id <> ?2"
+            ).bind(ref.split('§')[0], fid).run();
+            superseded += (u.meta.changes || 0);
+          }
+        }
+      } catch (e) { }
+
+      /* الربط الصريح حسب تعليمات التحميل */
+      let linked = [];
+      if (Array.isArray(item.link_to)) {
+        for (const mid of item.link_to) {
+          const m = await env.DB.prepare('SELECT id FROM minds WHERE id = ?1').bind(mid).first();
+          if (m) {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO mind_files (mind_id, file_id, granted_by) VALUES (?1, ?2, ?3)'
+            ).bind(mid, fid, 'bundle:' + g.user.username).run();
+            linked.push(mid);
+          }
+        }
+      }
+
+      r.ok = true; r.id = fid; r.superseded = superseded; r.linked = linked;
+      if (hits.length) r.overridden = hits.map(h => h.type + '(' + h.masked + ')');
+      report.push(r);
+    }
+    return json({ ok: true, report });
+  }
+
   /* ===== إنشاء ملف ===== */
   if (body.action === 'create') {
     const v = validate(body);
