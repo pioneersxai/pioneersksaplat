@@ -1,0 +1,173 @@
+/* ============================================================
+   /api/minds-files — منظومة العقول · المرحلة 1
+   جدول files بالترويسة-9 (ALL_GOV_Dev-Schema — ترجمة D1)
+
+   القواعد المنفَّذة حرفياً من أمر الشغل:
+   - Validation صارم: رفض أي إدخال بحقل ترويسة ناقص — برسالة تسمّي الحقل.
+     الفراغ المقصود يُكتب '-' صراحة.
+   - تعديل حقول الترويسة (status·supersedes·layer·inherits_to·
+     surface_sensitivity·parent_decision·stage): حساب المالك (admin) فقط.
+   - قراءة العقول (readable=1) = Active فقط — الأرشيف Superseded
+     يظهر للمالك في تبويب الأرشيف فقط.
+   🔒 GOV-SEC: فلتر البوابة يُضاف في المرحلة 3 — حتى حينها
+   ممنوع إدخال أي بيانات حقيقية (بيانات الاختبار وهمية دائماً).
+   ============================================================ */
+import { json, getUser, requireAdmin } from './_utils.js';
+
+/* الحقول التسعة الإلزامية + المحتوى — بأسمائها الحرفية من السكيما */
+const HEADER_FIELDS = [
+  ['name', 'الاسم (نظام التسمية §14)'],
+  ['stage', 'الحالة (T1/T2/T3/Final/V)'],
+  ['status', 'حالة السريان (Active/Superseded/Gap)'],
+  ['supersedes', 'يلغي (والفراغ المقصود = -)'],
+  ['layer', 'الطبقة (central / dept:XX / role:XX)'],
+  ['inherits_to', 'يورَّث إلى (والفراغ المقصود = -)'],
+  ['surface_sensitivity', 'حساسية السطح (0-public / 1-surface / 2-internal-no-output)'],
+  ['parent_decision', 'القرار الأم (والفراغ المقصود = -)'],
+  ['content', 'محتوى الملف']
+];
+
+const STAGES = ['T1', 'T2', 'T3', 'Final', 'V'];
+const STATUSES = ['Active', 'Superseded', 'Gap'];
+const SENSITIVITIES = ['0-public', '1-surface', '2-internal-no-output'];
+/* الدرجة 3-blocked ليست قيمة تخزين — فلتر بوابة (م5) · تُرفض هنا صراحة */
+
+/* حقول الترويسة التي تعديلها صلاحية المالك فقط (أمر الشغل م1/3) */
+const OWNER_ONLY_FIELDS = ['stage', 'stage_version', 'status', 'supersedes', 'layer', 'inherits_to', 'surface_sensitivity', 'surface_scope', 'parent_decision'];
+
+function normList(v) {
+  /* يقبل نصاً 'all' أو مصفوفة — يخزَّن JSON نصياً (ترجمة text[] → JSON) */
+  if (Array.isArray(v)) return v.length ? JSON.stringify(v) : '';
+  if (typeof v === 'string' && v.trim() !== '') return JSON.stringify([v.trim()]);
+  return '';
+}
+
+function validate(body) {
+  for (const [f, label] of HEADER_FIELDS) {
+    const v = body[f];
+    const empty = v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (Array.isArray(v) && v.length === 0);
+    if (empty) {
+      return { error: 'missing_field', field: f, msg: 'إدخال مرفوض — حقل الترويسة ناقص: «' + label + '». الفراغ المقصود يُكتب - صراحة.' };
+    }
+  }
+  if (STAGES.indexOf(body.stage) === -1) return { error: 'bad_stage', msg: 'قيمة stage غير صحيحة — المسموح: ' + STAGES.join(' / ') };
+  if (STATUSES.indexOf(body.status) === -1) return { error: 'bad_status', msg: 'قيمة status غير صحيحة — المسموح: ' + STATUSES.join(' / ') };
+  if (body.surface_sensitivity === '3-blocked') return { error: 'blocked_sensitivity', msg: 'الدرجة 3 (خارج المنظومة) قيمة منع إدخال لا تخزين — هذا المحتوى لا يدخل المنظومة أصلاً (م5).' };
+  if (SENSITIVITIES.indexOf(body.surface_sensitivity) === -1) return { error: 'bad_sensitivity', msg: 'قيمة الحساسية غير صحيحة — المسموح: ' + SENSITIVITIES.join(' / ') };
+  return null;
+}
+
+/* ---------- GET: قوائم ----------
+   ?readable=1 → قراءة العقول: Active فقط (بلا محتوى الأرشيف)
+   ?scope=archive → الأرشيف Superseded (أدمن فقط)
+   ?id=... → ملف واحد كامل (أدمن فقط في المرحلة 1) */
+export async function onRequestGet({ request, env }) {
+  if (!env.DB) return json({ error: 'no_db' }, 500);
+  const url = new URL(request.url);
+
+  /* مسار قراءة العقول — Active حصراً (سيستخدمه منطق العقول في المرحلة 2) */
+  if (url.searchParams.get('readable') === '1') {
+    const user = await getUser(request, env);
+    if (!user) return json({ error: 'auth' }, 401);
+    const { results } = await env.DB.prepare(
+      "SELECT id, name, stage, stage_version, status, layer, inherits_to, surface_sensitivity, surface_scope, parent_decision, updated_at FROM files WHERE status = 'Active' ORDER BY layer, name"
+    ).all();
+    return json({ ok: true, files: results });
+  }
+
+  const g = await requireAdmin(request, env);
+  if (g.error) return g.error;
+
+  const id = url.searchParams.get('id');
+  if (id) {
+    const row = await env.DB.prepare('SELECT * FROM files WHERE id = ?1').bind(id).first();
+    if (!row) return json({ error: 'not_found' }, 404);
+    return json({ ok: true, file: row });
+  }
+
+  const scope = url.searchParams.get('scope') === 'archive' ? 'Superseded' : 'Active';
+  const { results } = await env.DB.prepare(
+    'SELECT id, name, created_at, updated_at, stage, stage_version, status, supersedes, layer, inherits_to, surface_sensitivity, surface_scope, parent_decision, source_of, length(content) AS content_len FROM files WHERE status = ?1 ORDER BY layer, name'
+  ).bind(scope).all();
+  return json({ ok: true, scope, files: results });
+}
+
+/* ---------- POST: إنشاء / تعديل ترويسة / تغيير حالة ---------- */
+export async function onRequestPost({ request, env }) {
+  if (!env.DB) return json({ error: 'no_db' }, 500);
+
+  /* كل عمليات الكتابة في المرحلة 1: المالك فقط.
+     موظف يحاول → 403 (شرط قبول م1) */
+  const g = await requireAdmin(request, env);
+  if (g.error) return g.error;
+
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: 'bad_json' }, 400); }
+
+  /* ===== إنشاء ملف ===== */
+  if (body.action === 'create') {
+    const v = validate(body);
+    if (v) return json(v, 400);
+
+    const id = crypto.randomUUID();
+    const supersedes = normList(body.supersedes);
+    const inherits = normList(body.inherits_to);
+    if (!inherits) return json({ error: 'missing_field', field: 'inherits_to', msg: 'إدخال مرفوض — حقل الترويسة ناقص: «يورَّث إلى». الفراغ المقصود يُكتب - صراحة.' }, 400);
+
+    await env.DB.prepare(
+      'INSERT INTO files (id, name, stage, stage_version, status, supersedes, layer, inherits_to, surface_sensitivity, surface_scope, parent_decision, source_of, content) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)'
+    ).bind(
+      id, String(body.name).trim(), body.stage,
+      (body.stage_version || '-'), body.status,
+      supersedes || '["-"]', String(body.layer).trim(), inherits,
+      body.surface_sensitivity, (body.surface_scope || '-'),
+      String(body.parent_decision).trim(), (body.source_of || null),
+      String(body.content)
+    ).run();
+
+    /* Supersession: الملفات المذكورة في supersedes تتحول Superseded آلياً */
+    let superseded = 0;
+    try {
+      const list = JSON.parse(supersedes || '[]');
+      for (const ref of list) {
+        if (ref && ref !== '-') {
+          const r = await env.DB.prepare(
+            "UPDATE files SET status = 'Superseded', updated_at = date('now') WHERE name = ?1 AND status = 'Active' AND id <> ?2"
+          ).bind(ref.split('§')[0], id).run();
+          superseded += (r.meta.changes || 0);
+        }
+      }
+    } catch (e) { /* مرجع جزئي بصيغة غير اسمية — يُدار يدوياً */ }
+
+    return json({ ok: true, id, superseded });
+  }
+
+  /* ===== تعديل حقول الترويسة (المالك فقط — وصلنا هنا بعد requireAdmin) ===== */
+  if (body.action === 'update_header') {
+    if (!body.id) return json({ error: 'missing_id' }, 400);
+    const row = await env.DB.prepare('SELECT id FROM files WHERE id = ?1').bind(body.id).first();
+    if (!row) return json({ error: 'not_found' }, 404);
+
+    const sets = [];
+    const vals = [];
+    let n = 1;
+    for (const f of OWNER_ONLY_FIELDS) {
+      if (body[f] !== undefined) {
+        let v = body[f];
+        if (f === 'supersedes' || f === 'inherits_to') v = normList(v) || '["-"]';
+        if (f === 'status' && STATUSES.indexOf(v) === -1) return json({ error: 'bad_status' }, 400);
+        if (f === 'surface_sensitivity' && SENSITIVITIES.indexOf(v) === -1) return json({ error: 'bad_sensitivity' }, 400);
+        sets.push(f + ' = ?' + n); vals.push(v); n++;
+      }
+    }
+    if (body.content !== undefined) { sets.push('content = ?' + n); vals.push(String(body.content)); n++; }
+    if (!sets.length) return json({ error: 'nothing_to_update' }, 400);
+
+    sets.push("updated_at = date('now')");
+    vals.push(body.id);
+    await env.DB.prepare('UPDATE files SET ' + sets.join(', ') + ' WHERE id = ?' + n).bind(...vals).run();
+    return json({ ok: true });
+  }
+
+  return json({ error: 'bad_action' }, 400);
+}
