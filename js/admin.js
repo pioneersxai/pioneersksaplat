@@ -642,7 +642,7 @@ function mfSetStatus(id, status) {
     .catch(function () { alert('تعذر الاتصال'); });
 }
 
-function mfCreate() {
+function mfCreate(gateOverride) {
   var msg = document.getElementById('mfMsg');
   msg.style.color = 'var(--text-2)';
   msg.textContent = 'جارٍ الإدخال...';
@@ -653,6 +653,7 @@ function mfCreate() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'create',
+      gate_override: !!gateOverride,
       name: document.getElementById('mfName').value.trim(),
       stage: document.getElementById('mfStage').value,
       stage_version: document.getElementById('mfStageV').value.trim() || '-',
@@ -674,6 +675,16 @@ function mfCreate() {
         document.getElementById('mfContent').value = '';
         MF_SCOPE = 'active';
         mfLoad();
+      } else if (d.error === 'gate_blocked') {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = '🔒 ' + d.msg;
+        var list = d.hits.map(function (h) { return '• ' + h.type + ': ' + h.masked; }).join('\n');
+        if (confirm('🔒 فلتر بوابة GOV-SEC علّق الرفع واصطاد:\n\n' + list +
+          '\n\nهل تؤكد — بصفتك المالك — أن هذه ليست أسراراً حقيقية (مثل تواريخ في أسماء الملفات أو مصطلحات واردة في نص معتمد)؟\n\nالتأكيد يُسجَّل باسمك في سجل الوصول.')) {
+          mfCreate(true);
+        } else {
+          incidentsLoad();
+        }
       } else {
         msg.style.color = 'var(--danger)';
         msg.textContent = '✖ ' + (d.msg || d.error);
@@ -682,7 +693,105 @@ function mfCreate() {
     .catch(function () { msg.style.color = 'var(--danger)'; msg.textContent = '✖ تعذر الاتصال'; });
 }
 
-document.getElementById('mfCreateBtn').addEventListener('click', mfCreate);
+/* 🚨 حوادث بوابة GOV-SEC (المرحلة 3) */
+function incidentsLoad() {
+  fetch('/api/minds-files?incidents=1')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var box = document.getElementById('incList');
+      if (!d.ok) { box.innerHTML = '<div class="empty-note">خطأ: ' + esc(d.error || '') + ' — هل نُفِّذت سكيما المرحلة 3؟</div>'; return; }
+      if (!d.incidents.length) { box.innerHTML = '<div class="empty-note">لا حوادث مسجَّلة 🎉</div>'; return; }
+      var html = '<table class="emp-table"><thead><tr><th>#</th><th>الحادثة</th><th>متى (UTC)</th><th>الحالة</th><th></th></tr></thead><tbody>';
+      for (var i = 0; i < d.incidents.length; i++) {
+        var c = d.incidents[i];
+        html += '<tr><td>' + c.id + '</td>' +
+          '<td style="max-width:380px">' + esc(c.what_entered) + (c.remediation ? '<br><small style="color:var(--text-2)">المعالجة: ' + esc(c.remediation) + '</small>' : '') + '</td>' +
+          '<td>' + esc(c.created_at || '') + '</td>' +
+          '<td>' + (c.resolved ? '<span class="pill on">مُعالَجة</span>' : '<span class="pill off">مفتوحة</span>') + '</td>' +
+          '<td>' + (c.resolved ? '' : '<button class="chip-btn" onclick="incResolve(' + c.id + ')">✔ معالجة</button>') + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    })
+    .catch(function () {});
+}
+
+function incResolve(id) {
+  var rem = prompt('قرار المعالجة (مثال: إنذار كاذب — تواريخ في اسم الملف · أو: سر حقيقي — تم تدويره):');
+  if (!rem) return;
+  fetch('/api/minds-files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'resolve_incident', id: id, remediation: rem })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.ok) incidentsLoad(); else alert('خطأ: ' + d.error); })
+    .catch(function () { alert('تعذر الاتصال'); });
+}
+
+/* ============================================================
+   🔒 المرحلة 3: Checklist بوابة GOV-SEC (م5 — لا يُتخطى)
+   5 أسئلة إلزامية قبل أي إدخال — «نعم» على أيٍّ منها = منع.
+   ============================================================ */
+var GATE_QUESTIONS = [
+  'هل يحتوي المحتوى رقم ترخيص (ممارس · منشأة · جهاز)؟',
+  'هل يحتوي رقم سجل تجاري أو رسمي؟',
+  'هل يحتوي رقم اعتماد؟',
+  'هل يحتوي أسماء أفراد عائلة أو نسب ملكية؟',
+  'هل يحتوي سراً تقنياً (كلمة مرور · API Key · Token)؟'
+];
+
+function gateChecklist(onPass) {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(9,55,52,.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px';
+  var card = document.createElement('div');
+  card.className = 'task-builder';
+  card.style.cssText = 'max-width:520px;width:100%;max-height:90vh;overflow-y:auto';
+  var html = '<h4 class="sec-title sm">🔒 فحص بوابة GOV-SEC — إلزامي قبل الإدخال</h4>' +
+    '<p class="view-sub">أجب على الأسئلة الخمسة — أي «نعم» يعني أن هذا المحتوى مكانه السجل المغلق خارج المنظومة، لا هنا.</p>';
+  for (var i = 0; i < GATE_QUESTIONS.length; i++) {
+    html += '<div class="b-field" style="margin-bottom:10px"><label>' + (i + 1) + '· ' + GATE_QUESTIONS[i] + '</label>' +
+      '<div><label style="margin-inline-end:18px"><input type="radio" name="gq' + i + '" value="no"> لا</label>' +
+      '<label><input type="radio" name="gq' + i + '" value="yes"> نعم</label></div></div>';
+  }
+  html += '<div id="gateMsg" style="color:var(--danger);font-size:12.5px;min-height:18px;margin-bottom:8px"></div>' +
+    '<div class="builder-actions"><button class="btn-primary slim" id="gateOk" disabled>تأكيد الإدخال</button>' +
+    '<button class="chip-btn" id="gateCancel">إلغاء الرفع</button></div>';
+  card.innerHTML = html;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  function check() {
+    var allNo = true, anyYes = false, answered = 0;
+    for (var i = 0; i < GATE_QUESTIONS.length; i++) {
+      var sel = card.querySelector('input[name="gq' + i + '"]:checked');
+      if (sel) { answered++; if (sel.value === 'yes') anyYes = true; }
+      if (!sel || sel.value !== 'no') allNo = false;
+    }
+    var msg = card.querySelector('#gateMsg');
+    var ok = card.querySelector('#gateOk');
+    if (anyYes) {
+      msg.textContent = '🔒 ممنوع الإدخال — هذا المحتوى مكانه السجل المغلق خارج المنظومة (م5). ألغِ الرفع.';
+      ok.disabled = true;
+    } else {
+      msg.textContent = '';
+      ok.disabled = (answered < GATE_QUESTIONS.length);
+    }
+  }
+  var radios = card.querySelectorAll('input[type="radio"]');
+  for (var r = 0; r < radios.length; r++) radios[r].addEventListener('change', check);
+
+  card.querySelector('#gateCancel').addEventListener('click', function () { document.body.removeChild(overlay); });
+  card.querySelector('#gateOk').addEventListener('click', function () {
+    document.body.removeChild(overlay);
+    onPass();
+  });
+}
+
+document.getElementById('mfCreateBtn').addEventListener('click', function () {
+  if (!ADMIN_LIVE) { mfCreate(); return; }
+  gateChecklist(function () { mfCreate(); });
+});
 document.getElementById('mfTabActive').addEventListener('click', function () { MF_SCOPE = 'active'; mfLoad(); });
 document.getElementById('mfTabArchive').addEventListener('click', function () { MF_SCOPE = 'archive'; mfLoad(); });
 
