@@ -1,5 +1,5 @@
 /* ============================================================
-   admin.js — لوحة التحكم · BE-P3 + منظومة العقول (المرحلة 1)
+   admin.js — لوحة التحكم · BE-P3
    وضعان يُكتشفان تلقائياً:
    LIVE  → حارس دخول (أدمن فقط) + كل البيانات والحفظ من قاعدة D1
    DEMO  → البيانات التجريبية من admin-data.js (قبل تجهيز القاعدة)
@@ -623,7 +623,7 @@ function mfRender(files) {
       '<td>' + esc(f.parent_decision) + '</td>' +
       '<td>' + (f.status === 'Active' ? '<span class="pill on">Active</span>' : '<span class="pill off">' + esc(f.status) + '</span>') + '</td>' +
       '<td>' + (f.status === 'Active'
-        ? '<button class="chip-btn" onclick="mfSetStatus(\'' + f.id + '\',\'Superseded\')">🗄 Supersede</button>'
+        ? '<button class="chip-btn" onclick="mfSetStatus(\'' + f.id + '\',\'Superseded\')">🗄 Supersede</button> <button class="chip-btn" onclick="mfAutoLink(\'' + f.id + '\')" title="اشتقاق الربط من حقل يورَّث إلى">🕸 ربط تلقائي</button>'
         : '<button class="chip-btn" onclick="mfSetStatus(\'' + f.id + '\',\'Active\')">↩ تفعيل</button>') + '</td>' +
       '</tr>';
   }
@@ -686,6 +686,118 @@ document.getElementById('mfCreateBtn').addEventListener('click', mfCreate);
 document.getElementById('mfTabActive').addEventListener('click', function () { MF_SCOPE = 'active'; mfLoad(); });
 document.getElementById('mfTabArchive').addEventListener('click', function () { MF_SCOPE = 'archive'; mfLoad(); });
 
+/* ============================================================
+   🕸 العقول والتوريث — المرحلة 2
+   ============================================================ */
+function mindsLoad() {
+  if (!ADMIN_LIVE) return;
+  fetch('/api/minds')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var box = document.getElementById('mindsList');
+      if (!d.ok) { box.innerHTML = '<div class="empty-note">خطأ: ' + esc(d.error || '') + ' — هل نُفِّذت سكيما المرحلة 2؟</div>'; return; }
+      if (!d.minds.length) { box.innerHTML = '<div class="empty-note">لا عقول بعد — أنشئ العقل المركزي أولاً (المعرّف: central)</div>'; return; }
+      var html = '<table class="emp-table"><thead><tr><th>العقل</th><th>الطبقة</th><th>الأب</th><th>السطح</th><th>ملفات Active مربوطة</th><th></th></tr></thead><tbody>';
+      for (var i = 0; i < d.minds.length; i++) {
+        var m = d.minds[i];
+        html += '<tr>' +
+          '<td><b>' + esc(m.id) + '</b><br><small style="color:var(--text-2)">' + esc(m.name) + '</small></td>' +
+          '<td>' + esc(m.layer) + '</td>' +
+          '<td>' + esc(m.parent_mind_id || '—') + '</td>' +
+          '<td>' + esc(m.surface) + '</td>' +
+          '<td>' + m.active_files + '</td>' +
+          '<td><button class="chip-btn" onclick="mindRead(\'' + esc(m.id) + '\')">📖 ماذا يقرأ؟</button></td>' +
+          '</tr>';
+      }
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    })
+    .catch(function () {});
+}
+
+function mindCreate() {
+  var msg = document.getElementById('mnMsg');
+  msg.style.color = 'var(--text-2)';
+  msg.textContent = 'جارٍ الإنشاء...';
+  fetch('/api/minds', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'create_mind',
+      id: document.getElementById('mnId').value.trim(),
+      name: document.getElementById('mnName').value.trim(),
+      layer: document.getElementById('mnLayer').value,
+      parent_mind_id: document.getElementById('mnParent').value.trim(),
+      surface: document.getElementById('mnSurface').value.trim() || '-'
+    })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) {
+        msg.style.color = 'var(--ok)';
+        msg.textContent = '✔ أُنشئ العقل ' + d.id;
+        document.getElementById('mnId').value = '';
+        document.getElementById('mnName').value = '';
+        mindsLoad();
+      } else {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = '✖ ' + (d.msg || d.error);
+      }
+    })
+    .catch(function () { msg.style.color = 'var(--danger)'; msg.textContent = '✖ تعذر الاتصال'; });
+}
+
+function mfAutoLink(fileId) {
+  fetch('/api/minds', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'auto_link', file_id: fileId })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) {
+        alert(d.linked.length
+          ? '✔ رُبط الملف بـ ' + d.linked.length + ' عقل: ' + d.linked.join(' · ')
+          : 'لا عقول مطابقة لحقل «يورَّث إلى» — أنشئ العقول أولاً أو الحقل = -');
+        mindsLoad();
+      } else alert('خطأ: ' + (d.msg || d.error));
+    })
+    .catch(function () { alert('تعذر الاتصال'); });
+}
+
+function mindRead(mindId) {
+  fetch('/api/minds?read=' + encodeURIComponent(mindId))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.ok) { alert('خطأ: ' + (d.msg || d.error)); return; }
+      if (!d.files.length) { alert('العقل «' + mindId + '» لا يقرأ أي ملف حالياً (لا مربوط Active)'); return; }
+      var names = d.files.map(function (f) { return '• ' + f.name; });
+      alert('📖 العقل «' + mindId + '» يقرأ الآن ' + d.files.length + ' ملفاً:\n\n' + names.join('\n') + '\n\n(سُجّلت هذه القراءة في سجل الوصول)');
+    })
+    .catch(function () { alert('تعذر الاتصال'); });
+}
+
+function logsLoad() {
+  fetch('/api/minds?logs=1')
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var box = document.getElementById('alList');
+      if (!d.ok) { box.innerHTML = '<div class="empty-note">خطأ: ' + esc(d.error || '') + '</div>'; return; }
+      if (!d.logs.length) { box.innerHTML = '<div class="empty-note">لا قراءات مسجَّلة بعد</div>'; return; }
+      var html = '<table class="emp-table"><thead><tr><th>#</th><th>العقل</th><th>الفاعل</th><th>الملف</th><th>العملية</th><th>متى (UTC)</th></tr></thead><tbody>';
+      for (var i = 0; i < d.logs.length; i++) {
+        var l = d.logs[i];
+        html += '<tr><td>' + l.id + '</td><td>' + esc(l.mind_id || '—') + '</td><td>' + esc(l.actor || '—') + '</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis">' + esc(l.file_name || l.file_id || '—') + '</td><td>' + esc(l.action) + '</td><td>' + esc(l.at) + '</td></tr>';
+      }
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    })
+    .catch(function () {});
+}
+
+document.getElementById('mnCreateBtn').addEventListener('click', mindCreate);
+document.getElementById('alBtn').addEventListener('click', logsLoad);
+
 /* ================= 📱 Burger menu ================= */
 function setSidebar(open) {
   var aside = document.querySelector('.admin-side');
@@ -730,7 +842,6 @@ function initDemo() {
   renderEmployees();
   renderReview();
   renderStats();
-  mfLoad();
 }
 
 fetch('/api/me')
@@ -754,5 +865,6 @@ fetch('/api/me')
     loadEmployees();
     loadOutputs();
     mfLoad();
+    mindsLoad();
   })
   .catch(initDemo);
