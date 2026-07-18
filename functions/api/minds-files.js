@@ -187,7 +187,31 @@ export async function onRequestPost({ request, env }) {
       if (hits.length) r.overridden = hits.map(h => h.type + '(' + h.masked + ')');
       report.push(r);
     }
-    return json({ ok: true, report });
+
+    /* روابط إضافية لملفات قائمة مسبقاً (بالاسم · Active فقط) —
+       تخدم وراثات العقول عبر الحزم (مثل: role-seo يقرأ من المركزي وMKT) */
+    const linksReport = [];
+    if (Array.isArray(body.links)) {
+      for (const l of body.links) {
+        const m = await env.DB.prepare('SELECT id FROM minds WHERE id = ?1').bind(l.mind_id).first();
+        if (!m) { linksReport.push({ mind: l.mind_id, ok: false, msg: 'العقل غير موجود' }); continue; }
+        let n = 0; const missing = [];
+        for (const nm of (l.names || [])) {
+          const f = await env.DB.prepare(
+            "SELECT id FROM files WHERE name = ?1 AND status = 'Active'"
+          ).bind(nm).first();
+          if (f) {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO mind_files (mind_id, file_id, granted_by) VALUES (?1, ?2, ?3)'
+            ).bind(l.mind_id, f.id, 'bundle:' + g.user.username).run();
+            n++;
+          } else missing.push(nm);
+        }
+        linksReport.push({ mind: l.mind_id, ok: true, linked: n, missing });
+      }
+    }
+
+    return json({ ok: true, report, links: linksReport });
   }
 
   /* ===== إنشاء ملف ===== */
