@@ -36,6 +36,7 @@
       <button class="nav-item" data-view="tasks">🧭 <span>المهام والـ Schemas</span></button>
       <button class="nav-item" data-view="employees">👥 <span>الموظفون والأقسام</span></button>
       <button class="nav-item" data-view="review">✅ <span>مراجعة المخرجات</span> <b class="badge" id="reviewBadge">3</b></button>
+      <button class="nav-item" data-view="mindfiles">🧠 <span>ملفات العقول</span></button>
     </nav>
     <div class="side-foot">
       <div class="avatar">ع</div>
@@ -131,6 +132,42 @@
     <section id="view-review" class="admin-view">
       <p class="view-sub">مخرجات الموظفين بانتظار قرارك — لا يُعتمد أي مخرَج تلقائياً (مراجعة بشرية إلزامية).</p>
       <div id="reviewList"></div>
+    </section>
+
+    <!-- ========== Mind Files (منظومة العقول · المرحلة 1) ========== -->
+    <section id="view-mindfiles" class="admin-view">
+      <div class="demo-banner">🔒 GOV-SEC: فلتر البوابة يُفعَّل في المرحلة 3 — <b>حتى حينها: بيانات وهمية فقط، ممنوع أي بيانات حقيقية</b> (تراخيص · سجلات · أسرار).</div>
+      <div class="view-head">
+        <p class="view-sub">مكتبة ملفات منظومة العقول — الترويسة-9 إلزامية كاملة، والفراغ المقصود يُكتب <b>-</b> صراحة.</p>
+        <div>
+          <button class="chip-btn" id="mfTabActive">النشطة (Active)</button>
+          <button class="chip-btn" id="mfTabArchive">🗄 الأرشيف (Superseded)</button>
+        </div>
+      </div>
+
+      <div class="task-builder" style="margin-bottom:16px">
+        <h4 class="sec-title sm">＋ إدخال ملف جديد (الترويسة-9)</h4>
+        <div class="b-row" style="grid-template-columns:2fr 1fr 1fr">
+          <div class="b-field"><label>1· الملف (نظام التسمية §14)</label><input type="text" id="mfName" placeholder="ALL_GOV_M6_Operating-Rules_V1-0_170726"></div>
+          <div class="b-field"><label>3· الحالة</label><select id="mfStage"><option>V</option><option>T1</option><option>T2</option><option>T3</option><option>Final</option></select></div>
+          <div class="b-field"><label>نسخة</label><input type="text" id="mfStageV" value="V1.0"></div>
+        </div>
+        <div class="b-row" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="b-field"><label>4· حالة السريان</label><select id="mfStatus"><option>Active</option><option>Superseded</option><option>Gap</option></select></div>
+          <div class="b-field"><label>5· يلغي (- أو اسم ملف)</label><input type="text" id="mfSupersedes" value="-"></div>
+          <div class="b-field"><label>6· الطبقة</label><input type="text" id="mfLayer" placeholder="central / dept:MKT / role:seo"></div>
+        </div>
+        <div class="b-row" style="grid-template-columns:1fr 1fr 1fr">
+          <div class="b-field"><label>7· يورَّث إلى</label><input type="text" id="mfInherits" placeholder="all / dept:MKT / -"></div>
+          <div class="b-field"><label>8· حساسية السطح</label><select id="mfSens"><option>2-internal-no-output</option><option>1-surface</option><option>0-public</option></select></div>
+          <div class="b-field"><label>9· القرار الأم</label><input type="text" id="mfDecision" placeholder="D-16 / -"></div>
+        </div>
+        <div class="b-field"><label>المحتوى (Markdown كاملاً)</label><textarea id="mfContent" rows="6" placeholder="الصق محتوى الملف كما اعتُمد حرفياً"></textarea></div>
+        <button class="btn-primary slim" id="mfCreateBtn">إدخال الملف</button>
+        <small id="mfMsg" style="display:block;margin-top:8px;color:var(--text-2)"></small>
+      </div>
+
+      <div id="mfList"></div>
     </section>
   </main>
 </div>
