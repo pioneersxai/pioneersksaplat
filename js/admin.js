@@ -825,6 +825,13 @@ document.getElementById('bundleBtn').addEventListener('click', function () {
               (x.linked && x.linked.length ? ' · رُبط: ' + x.linked.join('،') : '') +
               (x.msg ? ' — ' + x.msg : '');
           });
+          if (d.links && d.links.length) {
+            lines.push('— روابط الوراثة —');
+            d.links.forEach(function (l) {
+              lines.push((l.ok ? '✔ ' : '✖ ') + l.mind + ': رُبط ' + (l.linked || 0) + ' ملفاً قائماً' +
+                (l.missing && l.missing.length ? ' · مفقود: ' + l.missing.join('،') : ''));
+            });
+          }
           msg.innerHTML = '<b>اكتمل: ' + okN + ' نجح · ' + failN + ' فشل</b><br>' + lines.map(esc).join('<br>');
           mfLoad(); mindsLoad(); incidentsLoad();
         })
