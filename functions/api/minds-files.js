@@ -3,7 +3,7 @@
    جدول files بالترويسة-9 (ALL_GOV_Dev-Schema — ترجمة D1)
 
    القواعد المنفَّذة حرفياً من أمر الشغل:
-   - Validation صارم: رفض أي إدخال بحقل ترويسة ناقص — برسالة تسمّي الحقل.
+   - Validation صارم: رفض أي إد خال بحقل ترويسة ناقص — برسالة تسمّي الحقل.
      الفراغ المقصود يُكتب '-' صراحة.
    - تعديل حقول الترويسة (status·supersedes·layer·inherits_to·
      surface_sensitivity·parent_decision·stage): حساب المالك (admin) فقط.
