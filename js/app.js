@@ -316,11 +316,11 @@ function submitForm(data) {
         } else if (d.ok && d.demo) {
           demoResult(data); /* لا مفتاح API بعد → القالب التجريبي */
         } else {
-          aiMessage('⚠️ ' + t('aiError'));
+          aiMessage('⚠️ ' + t('aiError') + ' <small>[' + (d.error || '?') + (d.status ? ' · ' + d.status : '') + ']</small>');
           lockComposer(false);
         }
       })
-      .catch(function () { aiMessage('⚠️ ' + t('aiError')); lockComposer(false); });
+      .catch(function () { aiMessage('⚠️ ' + t('aiError') + ' <small>[network]</small>'); lockComposer(false); });
     return;
   }
   demoResult(data);
@@ -370,10 +370,10 @@ function userSend() {
         } else if (d.ok && d.demo) {
           aiMessage(t('freeReply'));
         } else {
-          aiMessage('⚠️ ' + t('aiError'));
+          aiMessage('⚠️ ' + t('aiError') + ' <small>[' + (d.error || '?') + (d.status ? ' · ' + d.status : '') + ']</small>');
         }
       })
-      .catch(function () { aiMessage('⚠️ ' + t('aiError')); });
+      .catch(function () { aiMessage('⚠️ ' + t('aiError') + ' <small>[network]</small>'); });
     return;
   }
   setTimeout(function () { aiMessage(t('freeReply')); }, 500);
