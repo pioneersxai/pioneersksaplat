@@ -2,7 +2,7 @@
    admin.js — لوحة التحكم · BE-P3
    وضعان يُكتشفان تلقائياً:
    LIVE  → حارس دخول (أدمن فقط) + كل البيانات والحفظ من قاعدة D1
-   DEMO  → البيانات التجريبية من admin-data.js (قبل تج  هيز القاعدة)
+   DEMO  → البيانات التجريبية من admin-data.js (قبل تجهيز القاعدة)
    ============================================================ */
 
 var adminState = { theme: 'light', view: 'overview', selectedTask: null };
@@ -812,7 +812,7 @@ document.getElementById('bundleBtn').addEventListener('click', function () {
       fetch('/api/minds-files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'import_bundle', gate_override: true, files: bundle.files })
+        body: JSON.stringify({ action: 'import_bundle', gate_override: true, files: bundle.files, links: bundle.links || [] })
       })
         .then(function (r) { return r.json(); })
         .then(function (d) {
