@@ -792,6 +792,47 @@ document.getElementById('mfCreateBtn').addEventListener('click', function () {
   if (!ADMIN_LIVE) { mfCreate(); return; }
   gateChecklist(function () { mfCreate(); });
 });
+document.getElementById('incBtn').addEventListener('click', incidentsLoad);
+
+/* 📦 استيراد حزمة معتمدة (تحميل ملفات العقول) */
+document.getElementById('bundleBtn').addEventListener('click', function () {
+  var inp = document.getElementById('bundleFile');
+  var msg = document.getElementById('bundleMsg');
+  if (!inp.files || !inp.files.length) { msg.textContent = '✖ اختر ملف الحزمة (JSON) أولاً'; return; }
+
+  var reader = new FileReader();
+  reader.onload = function () {
+    var bundle;
+    try { bundle = JSON.parse(reader.result); } catch (e) { msg.textContent = '✖ ملف JSON غير سليم'; return; }
+    if (!Array.isArray(bundle.files)) { msg.textContent = '✖ بنية الحزمة غير صحيحة'; return; }
+
+    gateChecklist(function () {
+      if (!confirm('📦 استيراد ' + bundle.files.length + ' ملفاً معتمداً.\n\nالفلتر سيصطاد كلمات تنظيمية واردة في نصوص الحوكمة نفسها (مثل «ترخيص») — تأكيدك يتجاوزها موثَّقاً باسمك لكل ملف.\n\nنتابع؟')) return;
+      msg.textContent = '⏳ جارٍ الاستيراد...';
+      fetch('/api/minds-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'import_bundle', gate_override: true, files: bundle.files })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok) { msg.textContent = '✖ ' + (d.msg || d.error); return; }
+          var okN = d.report.filter(function (x) { return x.ok; }).length;
+          var failN = d.report.length - okN;
+          var lines = d.report.map(function (x) {
+            return (x.ok ? '✔ ' : '✖ ') + x.name +
+              (x.superseded ? ' · ألغى ' + x.superseded : '') +
+              (x.linked && x.linked.length ? ' · رُبط: ' + x.linked.join('،') : '') +
+              (x.msg ? ' — ' + x.msg : '');
+          });
+          msg.innerHTML = '<b>اكتمل: ' + okN + ' نجح · ' + failN + ' فشل</b><br>' + lines.map(esc).join('<br>');
+          mfLoad(); mindsLoad(); incidentsLoad();
+        })
+        .catch(function () { msg.textContent = '✖ تعذر الاتصال'; });
+    });
+  };
+  reader.readAsText(inp.files[0]);
+});
 document.getElementById('mfTabActive').addEventListener('click', function () { MF_SCOPE = 'active'; mfLoad(); });
 document.getElementById('mfTabArchive').addEventListener('click', function () { MF_SCOPE = 'archive'; mfLoad(); });
 
