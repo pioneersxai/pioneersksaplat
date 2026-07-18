@@ -12,7 +12,7 @@
    🔒 GOV-SEC: فلتر البوابة يُضاف في المرحلة 3 — حتى حينها
    ممنوع إدخال أي بيانات حقيقية (بيانات الاختبار وهمية دائماً).
    ============================================================ */
-import { json, getUser, requireAdmin } from './_utils.js';
+import { json, getUser, requireAdmin, gateScan } from './_utils.js';
 
 /* الحقول التسعة الإلزامية + المحتوى — بأسمائها الحرفية من السكيما */
 const HEADER_FIELDS = [
@@ -78,6 +78,14 @@ export async function onRequestGet({ request, env }) {
   const g = await requireAdmin(request, env);
   if (g.error) return g.error;
 
+  /* ---- حوادث البوابة (أدمن) ---- */
+  if (url.searchParams.get('incidents') === '1') {
+    const { results } = await env.DB.prepare(
+      'SELECT id, what_entered, seen_by, remediation, resolved, created_at FROM incidents ORDER BY id DESC LIMIT 50'
+    ).all();
+    return json({ ok: true, incidents: results });
+  }
+
   const id = url.searchParams.get('id');
   if (id) {
     const row = await env.DB.prepare('SELECT * FROM files WHERE id = ?1').bind(id).first();
@@ -104,10 +112,47 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: 'bad_json' }, 400); }
 
+  /* ===== حوادث البوابة: تعليم كمُعالَج ===== */
+  if (body.action === 'resolve_incident') {
+    if (!body.id) return json({ error: 'missing_id' }, 400);
+    await env.DB.prepare(
+      'UPDATE incidents SET resolved = 1, remediation = ?1 WHERE id = ?2'
+    ).bind(body.remediation || 'روجعت — لا سر حقيقياً', body.id).run();
+    return json({ ok: true });
+  }
+
   /* ===== إنشاء ملف ===== */
   if (body.action === 'create') {
     const v = validate(body);
     if (v) return json(v, 400);
+
+    /* 🔒 فلتر البوابة (المرحلة 3): فحص آلي قبل أي إدخال —
+       اصطياد → تعليق الرفع + تسجيل حادثة + تنبيه المالك.
+       التجاوز فقط بتأكيد صريح من المالك (gate_override) ويُسجَّل. */
+    if (!body.gate_override) {
+      const hits = gateScan(String(body.name) + '\n' + String(body.content));
+      if (hits.length) {
+        await env.DB.prepare(
+          'INSERT INTO incidents (what_entered, seen_by, remediation, resolved) VALUES (?1, ?2, ?3, 0)'
+        ).bind(
+          'محاولة رفع مُعلَّقة: «' + String(body.name).slice(0, 80) + '» — اصطياد: ' +
+          hits.map(h => h.type + ' (' + h.masked + ')').join(' · '),
+          JSON.stringify([g.user.username]),
+          null
+        ).run();
+        return json({
+          error: 'gate_blocked',
+          hits,
+          msg: '🔒 فلتر البوابة علّق الرفع — اصطاد: ' + hits.map(h => h.type + ' (' + h.masked + ')').join(' · ') +
+            '. سُجّلت حادثة. إن كنت متأكداً أن هذا ليس سراً حقيقياً (مثل تواريخ أو مصطلحات في نص معتمد) أكّد التجاوز.'
+        }, 422);
+      }
+    } else {
+      /* تجاوز موثَّق بقرار المالك */
+      await env.DB.prepare(
+        'INSERT INTO access_logs (mind_id, actor, file_id, action) VALUES (NULL, ?1, NULL, ?2)'
+      ).bind(g.user.username, 'gate-override: ' + String(body.name).slice(0, 80)).run();
+    }
 
     const id = crypto.randomUUID();
     const supersedes = normList(body.supersedes);
