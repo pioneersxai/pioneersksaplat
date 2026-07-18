@@ -125,11 +125,13 @@ export async function onRequestPost({ request, env }) {
      كل ملف: يُفحص بالبوابة (التجاوز الجماعي بقرار المالك يُسجَّل لكل ملف) ·
      Supersession آلي · ربط صريح بالعقول حسب تعليمات التحميل (link_to). */
   if (body.action === 'import_bundle') {
-    if (!Array.isArray(body.files) || !body.files.length) return json({ error: 'empty_bundle' }, 400);
-    if (body.files.length > 60) return json({ error: 'too_many' }, 400);
+    const hasFiles = Array.isArray(body.files) && body.files.length > 0;
+    const hasLinks = Array.isArray(body.links) && body.links.length > 0;
+    if (!hasFiles && !hasLinks) return json({ error: 'empty_bundle' }, 400);
+    if (hasFiles && body.files.length > 60) return json({ error: 'too_many' }, 400);
 
     const report = [];
-    for (const item of body.files) {
+    for (const item of (body.files || [])) {
       const r = { name: item.name || '؟' };
       const v = validate(item);
       if (v) { r.ok = false; r.msg = v.msg; report.push(r); continue; }
