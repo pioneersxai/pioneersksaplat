@@ -1,5 +1,5 @@
 /* ============================================================
-   admin.js — لوحة التحكم · BE-P3
+   admin.js — لوحة التحكم · BE-P3 + منظومة العقول (المرحلة 1)
    وضعان يُكتشفان تلقائياً:
    LIVE  → حارس دخول (أدمن فقط) + كل البيانات والحفظ من قاعدة D1
    DEMO  → البيانات التجريبية من admin-data.js (قبل تجهيز القاعدة)
@@ -22,7 +22,8 @@ var VIEW_TITLES = {
   overview: 'نظرة عامة',
   tasks: 'المهام والـ Schemas',
   employees: 'الموظفون والأقسام',
-  review: 'مراجعة المخرجات'
+  review: 'مراجعة المخرجات',
+  mindfiles: 'ملفات العقول (منظومة العقول)'
 };
 
 function switchView(view) {
@@ -585,6 +586,106 @@ function loadOutputs() {
     .then(function (d) { if (d.ok) { L_OUTS = d.outputs; renderReview(); } });
 }
 
+/* ============================================================
+   🧠 ملفات العقول — المرحلة 1 (الترويسة-9)
+   ============================================================ */
+var MF_SCOPE = 'active';
+
+function mfLoad() {
+  if (!ADMIN_LIVE) {
+    document.getElementById('mfList').innerHTML = '<div class="empty-note">تعمل هذه الشاشة بعد الاتصال بقاعدة البيانات (الوضع الحي)</div>';
+    return;
+  }
+  var url = '/api/minds-files' + (MF_SCOPE === 'archive' ? '?scope=archive' : '');
+  fetch(url)
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.ok) { document.getElementById('mfList').innerHTML = '<div class="empty-note">خطأ: ' + esc(d.error || '') + ' — هل نُفِّذت سكيما المرحلة 1 في القاعدة؟</div>'; return; }
+      mfRender(d.files || []);
+    })
+    .catch(function () { document.getElementById('mfList').innerHTML = '<div class="empty-note">تعذر الاتصال</div>'; });
+}
+
+function mfRender(files) {
+  var box = document.getElementById('mfList');
+  if (!files.length) {
+    box.innerHTML = '<div class="empty-note">' + (MF_SCOPE === 'archive' ? 'الأرشيف فارغ' : 'لا ملفات نشطة بعد') + '</div>';
+    return;
+  }
+  var html = '<table class="emp-table"><thead><tr><th>الملف</th><th>الطبقة</th><th>يورَّث إلى</th><th>الحساسية</th><th>القرار الأم</th><th>الحالة</th><th></th></tr></thead><tbody>';
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    html += '<tr>' +
+      '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis" title="' + esc(f.name) + '">' + esc(f.name) + '<br><small style="color:var(--text-2)">' + esc(f.stage) + ' ' + esc(f.stage_version || '') + ' · ' + esc(f.updated_at || '') + '</small></td>' +
+      '<td>' + esc(f.layer) + '</td>' +
+      '<td>' + esc(f.inherits_to) + '</td>' +
+      '<td>' + esc(f.surface_sensitivity) + '</td>' +
+      '<td>' + esc(f.parent_decision) + '</td>' +
+      '<td>' + (f.status === 'Active' ? '<span class="pill on">Active</span>' : '<span class="pill off">' + esc(f.status) + '</span>') + '</td>' +
+      '<td>' + (f.status === 'Active'
+        ? '<button class="chip-btn" onclick="mfSetStatus(\'' + f.id + '\',\'Superseded\')">🗄 Supersede</button>'
+        : '<button class="chip-btn" onclick="mfSetStatus(\'' + f.id + '\',\'Active\')">↩ تفعيل</button>') + '</td>' +
+      '</tr>';
+  }
+  html += '</tbody></table>';
+  box.innerHTML = html;
+}
+
+function mfSetStatus(id, status) {
+  fetch('/api/minds-files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'update_header', id: id, status: status })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.ok) mfLoad(); else alert('خطأ: ' + (d.msg || d.error)); })
+    .catch(function () { alert('تعذر الاتصال'); });
+}
+
+function mfCreate() {
+  var msg = document.getElementById('mfMsg');
+  msg.style.color = 'var(--text-2)';
+  msg.textContent = 'جارٍ الإدخال...';
+  var inheritsRaw = document.getElementById('mfInherits').value.trim();
+  var supersedesRaw = document.getElementById('mfSupersedes').value.trim();
+  fetch('/api/minds-files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'create',
+      name: document.getElementById('mfName').value.trim(),
+      stage: document.getElementById('mfStage').value,
+      stage_version: document.getElementById('mfStageV').value.trim() || '-',
+      status: document.getElementById('mfStatus').value,
+      supersedes: supersedesRaw ? supersedesRaw.split('،').join(',').split(',').map(function (s) { return s.trim(); }).filter(Boolean) : '',
+      layer: document.getElementById('mfLayer').value.trim(),
+      inherits_to: inheritsRaw ? inheritsRaw.split('،').join(',').split(',').map(function (s) { return s.trim(); }).filter(Boolean) : '',
+      surface_sensitivity: document.getElementById('mfSens').value,
+      parent_decision: document.getElementById('mfDecision').value.trim(),
+      content: document.getElementById('mfContent').value
+    })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) {
+        msg.style.color = 'var(--ok)';
+        msg.textContent = '✔ أُدخل الملف' + (d.superseded ? ' · وتحوّل ' + d.superseded + ' ملف قديم إلى Superseded آلياً' : '');
+        document.getElementById('mfName').value = '';
+        document.getElementById('mfContent').value = '';
+        MF_SCOPE = 'active';
+        mfLoad();
+      } else {
+        msg.style.color = 'var(--danger)';
+        msg.textContent = '✖ ' + (d.msg || d.error);
+      }
+    })
+    .catch(function () { msg.style.color = 'var(--danger)'; msg.textContent = '✖ تعذر الاتصال'; });
+}
+
+document.getElementById('mfCreateBtn').addEventListener('click', mfCreate);
+document.getElementById('mfTabActive').addEventListener('click', function () { MF_SCOPE = 'active'; mfLoad(); });
+document.getElementById('mfTabArchive').addEventListener('click', function () { MF_SCOPE = 'archive'; mfLoad(); });
+
 /* ================= 📱 Burger menu ================= */
 function setSidebar(open) {
   var aside = document.querySelector('.admin-side');
@@ -629,6 +730,7 @@ function initDemo() {
   renderEmployees();
   renderReview();
   renderStats();
+  mfLoad();
 }
 
 fetch('/api/me')
@@ -651,5 +753,6 @@ fetch('/api/me')
     loadTasks();
     loadEmployees();
     loadOutputs();
+    mfLoad();
   })
   .catch(initDemo);
