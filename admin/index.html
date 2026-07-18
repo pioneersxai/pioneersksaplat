@@ -168,6 +168,29 @@
       </div>
 
       <div id="mfList"></div>
+
+      <!-- ===== المرحلة 2: العقول والتوريث ===== -->
+      <h3 class="sec-title">🕸 العقول والتوريث (المرحلة 2)</h3>
+      <p class="view-sub">الهرم: central → dept → role · العقل يقرأ فقط ما رُبط له وهو Active · كل قراءة تُسجَّل.</p>
+
+      <div class="task-builder" style="margin-bottom:16px">
+        <h4 class="sec-title sm">＋ إنشاء عقل</h4>
+        <div class="b-row" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
+          <div class="b-field"><label>المعرّف</label><input type="text" id="mnId" placeholder="central / dept-MKT / role-seo"></div>
+          <div class="b-field"><label>الاسم</label><input type="text" id="mnName" placeholder="العقل المركزي"></div>
+          <div class="b-field"><label>الطبقة</label><select id="mnLayer"><option>central</option><option>dept</option><option>role</option></select></div>
+          <div class="b-field"><label>الأب (للقسم/الدور)</label><input type="text" id="mnParent" placeholder="central أو dept-MKT"></div>
+          <div class="b-field"><label>السطح</label><input type="text" id="mnSurface" value="-"></div>
+        </div>
+        <button class="btn-primary slim" id="mnCreateBtn">إنشاء العقل</button>
+        <small id="mnMsg" style="display:block;margin-top:8px;color:var(--text-2)"></small>
+      </div>
+
+      <div id="mindsList"></div>
+
+      <h4 class="sec-title sm">📜 سجل الوصول (أي عقل قرأ أي ملف ومتى)</h4>
+      <button class="chip-btn" id="alBtn">تحديث السجل</button>
+      <div id="alList" style="margin-top:10px"></div>
     </section>
   </main>
 </div>
