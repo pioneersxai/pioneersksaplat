@@ -53,6 +53,36 @@ export function getCookie(request, name) {
   return m ? m[1] : null;
 }
 
+/* ============================================================
+   فلتر بوابة GOV-SEC (المرحلة 3 — م5 الجزء 3 ق2)
+   الفحص الآلي: أنماط أرقام طويلة + كلمات مفتاحية → تعليق الرفع.
+   «الآلي شبكة والبشري صياد» — لا يغني عن Checklist الواجهة.
+   ============================================================ */
+const GATE_KEYWORDS = [
+  'ترخيص', 'سجل تجاري', 'رقم اعتماد', 'رقم الاعتماد',
+  'password', 'api key', 'api_key', 'apikey', 'token', 'secret',
+  'sk-ant', 'كلمة مرور', 'كلمة المرور', 'باسورد'
+];
+
+export function gateScan(text) {
+  const hits = [];
+  const t = String(text || '');
+
+  /* أرقام طويلة متسلسلة (7+ خانات — أرقام التراخيص/السجلات) */
+  const nums = t.match(/\d{7,}/g) || [];
+  for (const n of nums.slice(0, 5)) {
+    hits.push({ type: 'رقم طويل (' + n.length + ' خانة)', masked: n.slice(0, 2) + '••••' + n.slice(-2) });
+  }
+
+  const low = t.toLowerCase();
+  for (const kw of GATE_KEYWORDS) {
+    if (low.indexOf(kw.toLowerCase()) !== -1) {
+      hits.push({ type: 'كلمة مفتاحية', masked: kw });
+    }
+  }
+  return hits;
+}
+
 /* يتحقق أن المستخدم الحالي أدمن — يعيد المستخدم أو Response خطأ */
 export async function requireAdmin(request, env) {
   const user = await getUser(request, env);
