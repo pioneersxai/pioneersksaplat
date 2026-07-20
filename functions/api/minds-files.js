@@ -3,7 +3,7 @@
    جدول files بالترويسة-9 (ALL_GOV_Dev-Schema — ترجمة D1)
 
    القواعد المنفَّذة حرفياً من أمر الشغل:
-   - Validation صارم: رفض أي إد خال بحقل ترويسة ناقص — برسالة تسمّي الحقل.
+   - Validation صارم: رفض أي إدخال بحقل ترويسة ناقص — برسالة تسمّي الحقل.
      الفراغ المقصود يُكتب '-' صراحة.
    - تعديل حقول الترويسة (status·supersedes·layer·inherits_to·
      surface_sensitivity·parent_decision·stage): حساب المالك (admin) فقط.
@@ -65,10 +65,13 @@ export async function onRequestGet({ request, env }) {
   if (!env.DB) return json({ error: 'no_db' }, 500);
   const url = new URL(request.url);
 
-  /* مسار قراءة العقول — Active حصراً (سيستخدمه منطق العقول في المرحلة 2) */
+  /* مسار قراءة العقول — Active حصراً.
+     🔒 مقصور على المالك (قرار 18-07-2026 بعد اختبار عدائي):
+     حقن المرحلة 5 يقرأ من القاعدة في الخادم مباشرة — الموظفون
+     لا يحتاجون هذا المسار، وأسماء الملفات درجة «داخلي». */
   if (url.searchParams.get('readable') === '1') {
-    const user = await getUser(request, env);
-    if (!user) return json({ error: 'auth' }, 401);
+    const gr = await requireAdmin(request, env);
+    if (gr.error) return gr.error;
     const { results } = await env.DB.prepare(
       "SELECT id, name, stage, stage_version, status, layer, inherits_to, surface_sensitivity, surface_scope, parent_decision, updated_at FROM files WHERE status = 'Active' ORDER BY layer, name"
     ).all();
