@@ -57,16 +57,60 @@
       </div>
     </div>
 
-    <!-- ========== Overview ========== -->
+    <!-- ========== Overview — لوحة الإحصائيات ========== -->
     <section id="view-overview" class="admin-view active">
       <div class="demo-banner">⚠️ كل الأرقام والأسماء في هذه اللوحة <b>وهمية للعرض فقط</b> — Prototype T1</div>
-      <div class="stat-grid">
-        <div class="stat-tile"><span class="stat-num" id="statTasks">—</span><span class="stat-lbl">مهام مفعّلة</span></div>
-        <div class="stat-tile"><span class="stat-num" id="statRoles">—</span><span class="stat-lbl">أقسام</span></div>
-        <div class="stat-tile"><span class="stat-num" id="statEmps">—</span><span class="stat-lbl">موظفون</span></div>
-        <div class="stat-tile warn"><span class="stat-num" id="statPending">—</span><span class="stat-lbl">مخرجات بانتظار مراجعتك</span></div>
+
+      <!-- KPI اليوم -->
+      <div class="dash-head">
+        <h3 class="sec-title" style="margin:0">📊 اليوم <small id="dashDate" style="color:var(--text-2);font-weight:400"></small></h3>
+        <button class="chip-btn" id="dashRefresh">⟳ تحديث</button>
       </div>
-      <h3 class="sec-title">آخر النشاط (تجريبي)</h3>
+      <div class="stat-grid kpi-row">
+        <div class="stat-tile"><span class="stat-num" id="kpiSub">—</span><span class="stat-lbl">مخرَجات أُرسلت اليوم</span></div>
+        <div class="stat-tile"><span class="stat-num" id="kpiApp">—</span><span class="stat-lbl">اعتُمدت اليوم</span></div>
+        <div class="stat-tile warn"><span class="stat-num" id="statPending">—</span><span class="stat-lbl">بانتظار مراجعتك الآن</span></div>
+        <div class="stat-tile"><span class="stat-num sm-num" id="kpiFast">—</span><span class="stat-lbl">⚡ أسرع مُنجز (7 أيام)</span></div>
+      </div>
+      <div class="meta-strip">مهام مفعّلة: <b id="statTasks">—</b> · أقسام: <b id="statRoles">—</b> · موظفون: <b id="statEmps">—</b></div>
+
+      <!-- شبكة اللوحة -->
+      <div class="dash-grid">
+        <div class="dash-card">
+          <h4>🎯 أداء الأقسام اليوم مقابل الهدف <small>(مخرَجات مُرسَلة · اضغط الرقم لتعديل الهدف)</small></h4>
+          <div id="deptMeters" class="meters"></div>
+        </div>
+
+        <div class="dash-card">
+          <h4>📅 المهام اليومية — اكتمال اليوم <small>(مكتمل / متوقع لكل قسم)</small></h4>
+          <div id="dailyMeters" class="meters"></div>
+        </div>
+
+        <div class="dash-card">
+          <h4>📈 آخر 7 أيام</h4>
+          <div class="chart-legend" id="trendLegend"></div>
+          <div class="chart-wrap" dir="ltr" id="trendWrap">
+            <svg id="trendSvg" viewBox="0 0 640 230" preserveAspectRatio="none"></svg>
+            <div class="chart-tip" id="trendTip"></div>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <h4>🧮 توزيع حالات المخرجات <small>(الإجمالي)</small></h4>
+          <div class="stack-bar" id="statusBar"></div>
+          <div class="stack-legend" id="statusLegend"></div>
+        </div>
+
+        <div class="dash-card wide">
+          <h4>🏆 لوحة الإنجاز — آخر 7 أيام <small>(الأسرع والأكثر إنجازاً)</small></h4>
+          <div style="overflow-x:auto"><table class="emp-table" id="lbTable">
+            <thead><tr><th>#</th><th>الموظف</th><th>القسم</th><th>أُرسل</th><th>متوسط الإنجاز</th><th>نسبة الاعتماد</th></tr></thead>
+            <tbody id="lbBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <h3 class="sec-title">آخر النشاط</h3>
       <div class="activity-list" id="activityList"></div>
     </section>
 
@@ -96,6 +140,11 @@
                   <option value="accounting">الحسابات</option>
                 </select>
               </div>
+            </div>
+            <div class="b-field">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="bDaily" style="width:auto"> 📅 مهمة يومية إلزامية (تظهر للموظف كل يوم ويجب إرسال مخرَجها)
+              </label>
             </div>
             <div class="b-field">
               <label>تعليمات النموذج (System Instructions) 🔒</label>
