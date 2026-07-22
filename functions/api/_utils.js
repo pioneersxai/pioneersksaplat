@@ -102,3 +102,68 @@ export async function getUser(request, env) {
   ).bind(token).first();
   return row || null;
 }
+
+/* ============================================================
+   المرحلة 4 — دورة حياة المخرَج (أمر الشغل م4 + TechSpecs بند 4)
+   ============================================================ */
+
+/* التصنيف critical تلقائياً (م4/المهمة 4) إذا احتوى المخرَج:
+   لقباً/اعتماداً طبياً · نمطاً من الفلتر اللغوي (م4/ب2) ·
+   وسم سطح سعودي عام · نوع «صفحة موقع/متجر» */
+const CRIT_LANG_FILTER = ['مضمون', '100%', '١٠٠٪', 'نهائي', 'دائم', 'يعالج', 'يزيل'];
+const CRIT_MEDICAL = [
+  'دكتور', 'دكتورة', 'طبيب', 'طبيبة', 'استشاري', 'أخصائي', 'اخصائي',
+  'بورد', 'زمالة', 'اعتماد طبي', 'ترخيص طبي', 'scfhs', 'cbahi', 'سباهي', 'gahar', 'جهار'
+];
+const CRIT_OUTPUT_TYPES = ['site-page', 'store-page'];
+const CRIT_SURFACE_TAG = 'سطح:سعودي-عام';
+
+export function classifyCriticality(content, outputType) {
+  const reasons = [];
+  const t = String(content || '');
+  const low = t.toLowerCase();
+
+  if (CRIT_OUTPUT_TYPES.indexOf(String(outputType || '')) !== -1) {
+    reasons.push('نوع صفحة موقع/متجر');
+  }
+  if (low.indexOf(CRIT_SURFACE_TAG) !== -1 || low.indexOf('saudi-public') !== -1) {
+    reasons.push('سطح سعودي عام');
+  }
+  for (const w of CRIT_LANG_FILTER) {
+    if (low.indexOf(w.toLowerCase()) !== -1) { reasons.push('فلتر لغوي: «' + w + '»'); break; }
+  }
+  for (const w of CRIT_MEDICAL) {
+    if (low.indexOf(w.toLowerCase()) !== -1) { reasons.push('لقب/اعتماد طبي: «' + w + '»'); break; }
+  }
+
+  return {
+    criticality: reasons.length ? 'critical' : 'normal',
+    reasons
+  };
+}
+
+/* قراءة إعدادات الدورة (settings) وتحديد الوضع الحالي:
+   - go_live_date فارغ → الفترة الانتقالية سارية (ما قبل Go-Live أشدّ لا أخفّ)
+   - الآن < go_live + transition_days → انتقالية (كل مخرَج Pending)
+   - بعدها → post: critical=Pending دائماً · normal=اعتماد آلي + عيّنة */
+export async function getLifecycle(env) {
+  const { results } = await env.DB.prepare('SELECT key, value FROM settings').all();
+  const s = {};
+  for (const r of (results || [])) s[r.key] = r.value;
+  const days = parseInt(s.transition_days || '60', 10);
+  const rate = parseFloat(s.normal_sample_rate || '0.2');
+  const goLive = (s.go_live_date || '').trim();
+
+  if (!goLive) {
+    return { mode: 'transition', phase: 'pre-golive', goLive: null, days, rate, daysLeft: null };
+  }
+  const end = new Date(goLive).getTime() + days * 86400000;
+  const now = Date.now();
+  if (now < end) {
+    return {
+      mode: 'transition', phase: 'transition', goLive, days, rate,
+      daysLeft: Math.ceil((end - now) / 86400000)
+    };
+  }
+  return { mode: 'post', phase: 'post', goLive, days, rate, daysLeft: 0 };
+}
