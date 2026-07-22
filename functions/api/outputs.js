@@ -93,8 +93,8 @@ export async function onRequestPost({ request, env }) {
     /* الانتقالية (أو critical في أي وقت): Pending-Review إلزامياً — لا مسار آخر */
 
     await env.DB.prepare(
-      'UPDATE outputs SET status = ?1, criticality = ?2, crit_reasons = ?3, sampled = ?4, reviewed_by = ?5, reviewed_at = ?6, reject_reason = NULL WHERE id = ?7'
-    ).bind(status, cls.criticality, cls.reasons.join(' · ') || null, sampled, reviewedBy, reviewedAt, row.id).run();
+      'UPDATE outputs SET status = ?1, criticality = ?2, crit_reasons = ?3, sampled = ?4, reviewed_by = ?5, reviewed_at = ?6, reject_reason = NULL, submitted_at = ?7 WHERE id = ?8'
+    ).bind(status, cls.criticality, cls.reasons.join(' · ') || null, sampled, reviewedBy, reviewedAt, new Date().toISOString(), row.id).run();
 
     return json({ ok: true, status, criticality: cls.criticality, reasons: cls.reasons, sampled: sampled === 1, mode: lc.mode });
   }
