@@ -1130,9 +1130,12 @@ function renderDash() {
   document.getElementById('kpiSub').textContent = s.kpi.submitted_today;
   document.getElementById('kpiApp').textContent = s.kpi.approved_today;
   document.getElementById('statPending').textContent = s.kpi.pending_now;
-  document.getElementById('kpiFast').textContent = s.kpi.fastest_name
-    ? (s.kpi.fastest_name + ' · ' + fmtMinutes(s.kpi.fastest_minutes))
-    : '—';
+  var kf = document.getElementById('kpiFast');
+  if (s.kpi.fastest_name) {
+    kf.innerHTML = esc(s.kpi.fastest_name) + ' <span class="kpi-sub">' + fmtMinutes(s.kpi.fastest_minutes) + ' للمخرَج</span>';
+  } else {
+    kf.innerHTML = '<span class="kpi-sub">لا بيانات كافية بعد</span>';
+  }
 
   renderDeptMeters(s.depts);
   renderDailyMeters(s.daily_missions);
