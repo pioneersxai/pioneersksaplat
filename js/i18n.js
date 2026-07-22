@@ -57,8 +57,15 @@ var STR = {
     loginFail: 'اسم المستخدم أو كلمة المرور غير صحيحة — أو الحساب موقوف',
     loggingIn: 'جارٍ الدخول...',
     aiThinking: 'المساعد يعمل على مهمتك...',
-    aiResultTag: 'المخرَج — بانتظار مراجعة الإدارة',
+    aiResultTag: 'المخرَج — مسودة',
     sentForReview: 'اكتملت البيانات ✔ نفّذت المهمة وفق تعليمات الإدارة، وأرسلت المخرَج لطابور المراجعة. يمكنك طلب تعديلات بالكتابة أدناه:',
+    draftReady: 'اكتملت البيانات ✔ هذه <b>مسودة</b> — عدّلها بالكتابة أدناه ما شئت، وعند الرضا اضغط «إرسال للمراجعة»:',
+    draftNote: '📝 مسودة — لا تُنشر ولا تُستخدم قبل اعتماد الإدارة',
+    submitBtnReview: '📤 إرسال للمراجعة',
+    subPending: '📥 أُرسل المخرَج لمراجعة الإدارة — سيصلك القرار هنا في المنصّة.',
+    subSampled: '📥 أُرسل المخرَج للمراجعة (اختير ضمن العيّنة الرقابية).',
+    subAutoApproved: '✅ اعتُمد المخرَج آلياً (مخرَج عادي بعد الفترة الانتقالية).',
+    subFail: 'تعذر الإرسال — حاول مرة أخرى',
     aiError: 'تعذر إتمام الطلب — حاول مرة أخرى، وإن تكرر أبلغ الإدارة'
   },
 
@@ -114,8 +121,15 @@ var STR = {
     loginFail: 'Wrong username or password — or account suspended',
     loggingIn: 'Signing in...',
     aiThinking: 'The assistant is working on your task...',
-    aiResultTag: 'Output — pending management review',
+    aiResultTag: 'Output — draft',
     sentForReview: 'Data complete ✔ Task executed per management instructions; the output was sent to the review queue. You can request changes below:',
+    draftReady: 'Data complete ✔ This is a <b>draft</b> — refine it by typing below, then press "Submit for review" when satisfied:',
+    draftNote: '📝 Draft — must not be published or used before management approval',
+    submitBtnReview: '📤 Submit for review',
+    subPending: '📥 Output sent for management review — the decision will reach you here.',
+    subSampled: '📥 Output sent for review (selected in the audit sample).',
+    subAutoApproved: '✅ Output auto-approved (normal output after the transition period).',
+    subFail: 'Submission failed — try again',
     aiError: 'Request failed — try again, and report to management if it persists'
   }
 };
