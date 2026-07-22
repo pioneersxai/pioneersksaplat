@@ -249,3 +249,12 @@
   .b-row{ grid-template-columns:80px 1fr; }
   .review-actions{ flex-wrap:wrap; }
 }
+
+/* لوحة دورة المخرَج (المرحلة 4) */
+#lifecyclePanel{
+  background:var(--card, #fff); border:1px solid var(--border, #e3e3e3);
+  border-radius:12px; padding:14px 16px; font-size:14px;
+}
+#lifecyclePanel .lc-controls input{
+  border:1px solid var(--border, #ccc); border-radius:6px; padding:4px 6px; font-family:inherit;
+}
