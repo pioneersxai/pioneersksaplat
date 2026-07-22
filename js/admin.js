@@ -57,6 +57,7 @@ function dbTaskToEditor(t) {
     name: (p.ar && p.ar[0]) || t.id,
     role: t.role,
     enabled: t.enabled,
+    daily: !!p.daily,
     instructions: t.instructions || '',
     fields: (p.fields || []).map(function (f) { return { label: f.ar, type: f.type }; }),
     payload: p
@@ -79,6 +80,7 @@ function editorToPayload(task) {
   p.ar = p.ar || [task.name, '']; p.ar[0] = task.name;
   p.en = p.en || [task.name, ''];
   p.steps = task.fields.length;
+  p.daily = task.daily ? 1 : 0;
 
   var oldFields = p.fields || [];
   p.fields = task.fields.map(function (f, i) {
@@ -156,6 +158,8 @@ function selectTask(idx) {
   document.getElementById('bIcon').value = task.icon;
   document.getElementById('bRole').value = task.role;
   document.getElementById('bInstructions').value = task.instructions;
+  var dailyCb = document.getElementById('bDaily');
+  if (dailyCb) dailyCb.checked = !!task.daily;
   document.getElementById('disableTaskBtn').textContent = task.enabled ? 'تعطيل المهمة' : 'تفعيل المهمة';
   renderFields(task);
   renderPreview(task);
@@ -218,6 +222,8 @@ function saveTask() {
   task.icon = document.getElementById('bIcon').value.trim() || task.icon;
   task.role = document.getElementById('bRole').value;
   task.instructions = document.getElementById('bInstructions').value;
+  var dailyCb = document.getElementById('bDaily');
+  if (dailyCb) task.daily = dailyCb.checked;
 
   var btn = document.getElementById('saveTaskBtn');
 
@@ -491,6 +497,7 @@ function buildEmpForm() {
       .catch(function () { msg.textContent = '✖ تعذر الاتصال'; });
   });
 }
+
 /* ================= Review queue — دورة المخرَج (المرحلة 4) ================= */
 var L_LIFECYCLE = null;
 
@@ -1083,7 +1090,240 @@ fetch('/api/me')
     loadTasks();
     loadEmployees();
     loadOutputs();
+    statsLoad();
     mfLoad();
     mindsLoad();
   })
   .catch(initDemo);
+
+/* ============================================================
+   📊 لوحة الإحصائيات (Dashboard) — الأقسام · الاتجاه · الإنجاز
+   الألوان من فاحص لوحة dataviz: فاتح #17958c/#d97706 · داكن #2fa89c/#c97a1f
+   ============================================================ */
+var ROLE_AR = {
+  reception: 'الاستقبال', marketing: 'التسويق', social: 'السوشيال ميديا',
+  website: 'المواقع والمتاجر', stores: 'المستودعات', hr: 'الموارد البشرية', accounting: 'الحسابات'
+};
+var L_STATS = null;
+
+function chartColors() {
+  var dark = document.body.getAttribute('data-theme') === 'dark';
+  return dark
+    ? { s1: '#2fa89c', s2: '#c97a1f' }
+    : { s1: '#17958c', s2: '#d97706' };
+}
+
+function statsLoad() {
+  if (!ADMIN_LIVE) return;
+  fetch('/api/stats')
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.ok) { L_STATS = d; renderDash(); } })
+    .catch(function () {});
+}
+
+function renderDash() {
+  if (!L_STATS) return;
+  var s = L_STATS;
+
+  /* KPI */
+  document.getElementById('dashDate').textContent = '· ' + s.today + ' (بتوقيت الرياض)';
+  document.getElementById('kpiSub').textContent = s.kpi.submitted_today;
+  document.getElementById('kpiApp').textContent = s.kpi.approved_today;
+  document.getElementById('statPending').textContent = s.kpi.pending_now;
+  document.getElementById('kpiFast').textContent = s.kpi.fastest_name
+    ? (s.kpi.fastest_name + ' · ' + fmtMinutes(s.kpi.fastest_minutes))
+    : '—';
+
+  renderDeptMeters(s.depts);
+  renderDailyMeters(s.daily_missions);
+  renderTrend(s.trend);
+  renderStatusBar(s.statuses);
+  renderLeaderboard(s.leaderboard);
+}
+
+function fmtMinutes(m) {
+  if (m == null) return '—';
+  if (m < 60) return Math.round(m) + ' د';
+  return (m / 60).toFixed(1) + ' س';
+}
+
+/* ---- أداء الأقسام مقابل الهدف (Meters) ---- */
+function renderDeptMeters(depts) {
+  var box = document.getElementById('deptMeters');
+  box.innerHTML = '';
+  for (var i = 0; i < depts.length; i++) {
+    (function (d) {
+      var pct = d.target > 0 ? Math.min(100, Math.round(d.submitted_today / d.target * 100)) : 0;
+      var over = d.target > 0 && d.submitted_today > d.target;
+      var row = document.createElement('div');
+      row.className = 'meter-row';
+      row.innerHTML =
+        '<span class="meter-name">' + (ROLE_AR[d.role] || d.role) + (over ? ' 🔥' : '') + '</span>' +
+        '<span class="meter-track"><i style="width:' + pct + '%" class="' + (over ? 'over' : '') + '"></i></span>' +
+        '<button class="meter-val" title="اضغط لتعديل الهدف اليومي">' + d.submitted_today + ' / <u>' + d.target + '</u></button>';
+      row.querySelector('.meter-val').onclick = function () {
+        var v = prompt('الهدف اليومي لقسم «' + (ROLE_AR[d.role] || d.role) + '» (مخرَجات مُرسَلة/يوم):', d.target);
+        if (v === null) return;
+        fetch('/api/stats', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'set_target', role: d.role, daily_target: v.trim() })
+        }).then(function (r) { return r.json(); })
+          .then(function (x) { if (x.ok) statsLoad(); else alert('خطأ: ' + (x.msg || x.error)); });
+      };
+      box.appendChild(row);
+    })(depts[i]);
+  }
+}
+
+/* ---- المهام اليومية (Meters) ---- */
+function renderDailyMeters(list) {
+  var box = document.getElementById('dailyMeters');
+  box.innerHTML = '';
+  var any = false;
+  for (var i = 0; i < list.length; i++) {
+    var d = list[i];
+    if (!d.expected) continue;
+    any = true;
+    var pct = Math.min(100, Math.round(d.done / d.expected * 100));
+    var full = d.done >= d.expected;
+    var row = document.createElement('div');
+    row.className = 'meter-row';
+    row.innerHTML =
+      '<span class="meter-name">' + (ROLE_AR[d.role] || d.role) + (full ? ' ✅' : '') + '</span>' +
+      '<span class="meter-track"><i style="width:' + pct + '%"></i></span>' +
+      '<span class="meter-val">' + d.done + ' / ' + d.expected + '</span>';
+    box.appendChild(row);
+  }
+  if (!any) box.innerHTML = '<div class="empty-note" style="padding:14px">لا مهام يومية معرَّفة بعد — علّم أي مهمة ☑ «مهمة يومية إلزامية» من محرر المهام</div>';
+}
+
+/* ---- اتجاه 7 أيام (SVG خطّان + Tooltip) ---- */
+function renderTrend(trend) {
+  var svg = document.getElementById('trendSvg');
+  var tip = document.getElementById('trendTip');
+  var C = chartColors();
+  var W = 640, H = 230, padL = 34, padR = 70, padT = 16, padB = 30;
+  var iw = W - padL - padR, ih = H - padT - padB;
+
+  var max = 1;
+  for (var i = 0; i < trend.length; i++) max = Math.max(max, trend[i].submitted, trend[i].approved);
+  max = Math.ceil(max * 1.15) || 1;
+
+  function X(i) { return padL + (trend.length === 1 ? iw / 2 : i * iw / (trend.length - 1)); }
+  function Y(v) { return padT + ih - (v / max * ih); }
+
+  var html = '';
+  /* شبكة أفقية خفيفة + قيم المحور */
+  var steps = 4;
+  for (var g = 0; g <= steps; g++) {
+    var v = Math.round(max * g / steps);
+    var y = Y(v);
+    html += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" class="grid"/>' +
+      '<text x="' + (padL - 6) + '" y="' + (y + 4) + '" class="axis" text-anchor="end">' + v + '</text>';
+  }
+  /* تواريخ المحور السفلي (يوم/شهر) */
+  for (var t = 0; t < trend.length; t++) {
+    var dd = trend[t].date.slice(8, 10) + '/' + trend[t].date.slice(5, 7);
+    html += '<text x="' + X(t) + '" y="' + (H - 8) + '" class="axis" text-anchor="middle">' + dd + '</text>';
+  }
+  /* الخطان */
+  function line(key, color) {
+    var pts = [];
+    for (var i = 0; i < trend.length; i++) pts.push(X(i) + ',' + Y(trend[i][key]));
+    return '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  }
+  html += line('submitted', C.s1) + line('approved', C.s2);
+  /* وسم مباشر عند نهاية كل خط */
+  var last = trend.length - 1;
+  html += '<text x="' + (X(last) + 8) + '" y="' + (Y(trend[last].submitted) + 4) + '" class="dlabel">مُرسَل</text>';
+  html += '<text x="' + (X(last) + 8) + '" y="' + (Y(trend[last].approved) + (Math.abs(Y(trend[last].approved) - Y(trend[last].submitted)) < 14 ? 18 : 4)) + '" class="dlabel">معتمد</text>';
+  /* نقاط + أهداف hover أكبر من العلامة */
+  for (var p = 0; p < trend.length; p++) {
+    html += '<circle cx="' + X(p) + '" cy="' + Y(trend[p].submitted) + '" r="3.5" fill="' + C.s1 + '" stroke="var(--surface)" stroke-width="2"/>';
+    html += '<circle cx="' + X(p) + '" cy="' + Y(trend[p].approved) + '" r="3.5" fill="' + C.s2 + '" stroke="var(--surface)" stroke-width="2"/>';
+    html += '<rect x="' + (X(p) - iw / trend.length / 2) + '" y="0" width="' + (iw / trend.length) + '" height="' + H + '" fill="transparent" class="hitzone" data-i="' + p + '"/>';
+  }
+  html += '<line id="crosshair" y1="' + padT + '" y2="' + (padT + ih) + '" class="cross" style="display:none"/>';
+  svg.innerHTML = html;
+
+  /* Tooltip + Crosshair */
+  var zones = svg.querySelectorAll('.hitzone');
+  var cross = svg.querySelector('#crosshair');
+  for (var z = 0; z < zones.length; z++) {
+    zones[z].addEventListener('mouseenter', function (e) {
+      var i = parseInt(e.target.getAttribute('data-i'), 10);
+      var d = trend[i];
+      cross.setAttribute('x1', X(i)); cross.setAttribute('x2', X(i));
+      cross.style.display = 'block';
+      tip.innerHTML = '<b>' + d.date + '</b><br>مُرسَل: ' + d.submitted + '<br>معتمد: ' + d.approved;
+      tip.style.display = 'block';
+      var wrap = document.getElementById('trendWrap');
+      var ratio = wrap.clientWidth / W;
+      var px = X(i) * ratio;
+      tip.style.left = Math.min(wrap.clientWidth - 120, Math.max(0, px + 10)) + 'px';
+      tip.style.top = '10px';
+    });
+    zones[z].addEventListener('mouseleave', function () {
+      tip.style.display = 'none';
+      cross.style.display = 'none';
+    });
+  }
+
+  /* Legend */
+  document.getElementById('trendLegend').innerHTML =
+    '<span><i style="background:' + C.s1 + '"></i> مخرَجات مُرسَلة</span>' +
+    '<span><i style="background:' + C.s2 + '"></i> مخرَجات معتمدة</span>';
+}
+
+/* ---- توزيع الحالات (شريط مكدّس بفواصل 2px) ---- */
+function renderStatusBar(st) {
+  var defs = [
+    ['Pending-Review', 'بانتظار المراجعة', 'var(--warn)', '⏳'],
+    ['Approved', 'معتمد', 'var(--ok)', '✔'],
+    ['Rejected', 'مرفوض', 'var(--danger)', '✖'],
+    ['Draft', 'مسودة', 'var(--text-2)', '📝']
+  ];
+  var total = 0;
+  for (var i = 0; i < defs.length; i++) total += (st[defs[i][0]] || 0);
+  var bar = document.getElementById('statusBar');
+  var leg = document.getElementById('statusLegend');
+  if (!total) { bar.innerHTML = ''; leg.innerHTML = '<div class="empty-note" style="padding:10px">لا مخرجات بعد</div>'; return; }
+  var bh = '', lh = '';
+  for (var j = 0; j < defs.length; j++) {
+    var n = st[defs[j][0]] || 0;
+    if (n) bh += '<i style="flex-grow:' + n + ';background:' + defs[j][2] + '" title="' + defs[j][1] + ': ' + n + '"></i>';
+    lh += '<span><i style="background:' + defs[j][2] + '"></i> ' + defs[j][3] + ' ' + defs[j][1] + ' <b>' + n + '</b> (' + Math.round(n / total * 100) + '%)</span>';
+  }
+  bar.innerHTML = bh;
+  leg.innerHTML = lh;
+}
+
+/* ---- لوحة الإنجاز ---- */
+function renderLeaderboard(rows) {
+  var body = document.getElementById('lbBody');
+  body.innerHTML = '';
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="6"><div class="empty-note" style="padding:10px">لا إنجازات مسجَّلة في آخر 7 أيام بعد</div></td></tr>';
+    return;
+  }
+  var medals = ['🥇', '🥈', '🥉'];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var decided = (r.approved || 0) + (r.rejected || 0);
+    var rate = decided ? Math.round((r.approved || 0) / decided * 100) + '%' : '—';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + (medals[i] || (i + 1)) + '</td>' +
+      '<td><b>' + esc(r.name) + '</b></td>' +
+      '<td>' + (ROLE_AR[r.role] || esc(r.role)) + '</td>' +
+      '<td>' + r.submitted + '</td>' +
+      '<td>' + fmtMinutes(r.avg_minutes) + '</td>' +
+      '<td>' + rate + '</td>';
+    body.appendChild(tr);
+  }
+}
+
+/* ربط: تحديث يدوي + عند فتح النظرة العامة + عند تبديل الثيم (ألوان الرسم) */
+document.getElementById('dashRefresh').addEventListener('click', statsLoad);
+document.querySelector('[data-view="overview"]').addEventListener('click', statsLoad);
+document.getElementById('themeBtn').addEventListener('click', function () { if (L_STATS) renderDash(); });
