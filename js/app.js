@@ -154,20 +154,47 @@ function renderLibrary() {
   /* الوضع الحي: المهام من قاعدة D1 · التجريبي: من data.js */
   var list = LIVE ? SERVER_TASKS : (TASKS[state.role] || []);
 
-  for (var i = 0; i < list.length; i++) {
-    (function (task) {
-      var el = document.createElement('div');
-      el.className = 'task-card';
-      var txt = (state.lang === 'ar') ? task.ar : task.en;
-      el.innerHTML =
-        '<div class="icon">' + task.icon + '</div>' +
-        '<h4>' + txt[0] + '</h4>' +
-        '<p>' + txt[1] + '</p>' +
-        '<div class="steps">' + STR[state.lang].stepsPath(task.steps) + '</div>';
-      el.onclick = function () { openTask(task); };
-      grid.appendChild(el);
-    })(list[i]);
+  function addCard(task, isDaily) {
+    var el = document.createElement('div');
+    el.className = 'task-card' + (isDaily && task.done_today ? ' daily-done' : '');
+    var txt = (state.lang === 'ar') ? task.ar : task.en;
+    var badge = '';
+    if (isDaily) {
+      badge = task.done_today
+        ? '<div class="daily-badge done">✅ ' + t('dailyDoneBadge') + '</div>'
+        : '<div class="daily-badge">⏳ ' + t('dailyDueBadge') + '</div>';
+    }
+    el.innerHTML =
+      '<div class="icon">' + task.icon + '</div>' +
+      '<h4>' + txt[0] + '</h4>' +
+      '<p>' + txt[1] + '</p>' +
+      '<div class="steps">' + STR[state.lang].stepsPath(task.steps) + '</div>' +
+      badge;
+    el.onclick = function () { openTask(task); };
+    grid.appendChild(el);
   }
+
+  /* 📅 المهام اليومية الإلزامية أولاً (الوضع الحي) */
+  var daily = [], rest = [];
+  for (var i = 0; i < list.length; i++) {
+    if (LIVE && list[i].daily) daily.push(list[i]); else rest.push(list[i]);
+  }
+
+  if (daily.length) {
+    var done = 0;
+    for (var d = 0; d < daily.length; d++) if (daily[d].done_today) done++;
+    var h1 = document.createElement('div');
+    h1.className = 'grid-sec';
+    h1.innerHTML = '📅 ' + t('dailyTitle') + ' <b class="daily-count' + (done === daily.length ? ' all-done' : '') + '">' + done + '/' + daily.length + '</b><small>' + t('dailySub') + '</small>';
+    grid.appendChild(h1);
+    for (var a = 0; a < daily.length; a++) addCard(daily[a], true);
+
+    var h2 = document.createElement('div');
+    h2.className = 'grid-sec';
+    h2.innerHTML = '🗂 ' + t('deptTasksTitle');
+    grid.appendChild(h2);
+  }
+  for (var b = 0; b < rest.length; b++) addCard(rest[b], false);
 
   /* Locked card — visualizes role-based filtering */
   var locked = document.createElement('div');
@@ -371,6 +398,7 @@ function addSubmitBar() {
         else msg = t('subPending');
         bar.innerHTML = '<b>' + msg + '</b>';
         currentOutputId = null; /* لم تعد مسودة */
+        if (currentTask && currentTask.daily) currentTask.done_today = true; /* ✅ مهمة يومية أُنجزت */
       })
       .catch(function () { btn.disabled = false; btn.textContent = t('submitBtnReview'); alert(t('subFail') + ' [network]'); });
   };
