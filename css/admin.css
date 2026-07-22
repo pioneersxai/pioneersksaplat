@@ -258,3 +258,81 @@
 #lifecyclePanel .lc-controls input{
   border:1px solid var(--border, #ccc); border-radius:6px; padding:4px 6px; font-family:inherit;
 }
+
+/* ============================================================
+   📊 لوحة الإحصائيات (Dashboard)
+   ============================================================ */
+.dash-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.kpi-row{ margin-bottom:10px; }
+.stat-num.sm-num{ font-size:16px; line-height:1.5; padding-top:6px; }
+.meta-strip{ color:var(--text-2); font-size:12.5px; margin:2px 2px 18px; }
+.meta-strip b{ color:var(--text); }
+
+.dash-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:14px;
+  align-items:start; margin-bottom:26px;
+}
+.dash-card{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); box-shadow:var(--shadow);
+  padding:16px 18px; min-width:0;
+}
+.dash-card.wide{ grid-column:1 / -1; }
+.dash-card h4{ font-size:13.5px; margin-bottom:14px; }
+.dash-card h4 small{ color:var(--text-2); font-weight:400; font-size:11.5px; }
+
+/* Meters — أشرطة الهدف */
+.meters{ display:flex; flex-direction:column; gap:10px; }
+.meter-row{ display:flex; align-items:center; gap:10px; }
+.meter-name{ width:120px; flex-shrink:0; font-size:12.5px; font-weight:600; }
+.meter-track{
+  flex:1; height:14px; background:var(--bg);
+  border-radius:7px; overflow:hidden; display:block;
+}
+.meter-track i{
+  display:block; height:100%; border-radius:7px;
+  background:var(--brand-500); min-width:2px;
+  transition:width .4s ease;
+}
+.meter-track i.over{ background:var(--brand-700); }
+[data-theme="dark"] .meter-track i{ background:#2fa89c; }
+[data-theme="dark"] .meter-track i.over{ background:#5cc9be; }
+.meter-val{
+  width:74px; flex-shrink:0; text-align:start;
+  font-size:12.5px; color:var(--text); background:none; border:none;
+  font-family:inherit; padding:0;
+}
+button.meter-val{ cursor:pointer; }
+button.meter-val:hover u{ color:var(--accent); }
+
+/* الرسم الخطي */
+.chart-wrap{ position:relative; width:100%; }
+.chart-wrap svg{ width:100%; height:auto; display:block; }
+#trendSvg .grid{ stroke:var(--border); stroke-width:1; }
+#trendSvg .axis{ fill:var(--text-2); font-size:10px; font-family:inherit; }
+#trendSvg .dlabel{ fill:var(--text-2); font-size:10.5px; font-weight:700; font-family:inherit; }
+#trendSvg .cross{ stroke:var(--text-2); stroke-width:1; stroke-dasharray:3 3; }
+.chart-tip{
+  position:absolute; display:none; pointer-events:none;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:6px 10px; font-size:11.5px; line-height:1.7;
+  box-shadow:var(--shadow); z-index:5; direction:rtl; text-align:right;
+}
+.chart-legend{ display:flex; gap:16px; font-size:11.5px; color:var(--text-2); margin-bottom:8px; flex-wrap:wrap; }
+.chart-legend i, .stack-legend i{
+  display:inline-block; width:10px; height:10px; border-radius:3px; vertical-align:-1px; margin-inline-end:4px;
+}
+
+/* الشريط المكدّس */
+.stack-bar{
+  display:flex; gap:2px; height:18px; border-radius:9px; overflow:hidden;
+  background:var(--bg); margin-bottom:12px;
+}
+.stack-bar i{ display:block; height:100%; }
+.stack-legend{ display:flex; flex-wrap:wrap; gap:8px 18px; font-size:12px; color:var(--text-2); }
+.stack-legend b{ color:var(--text); }
+
+@media (max-width:860px){
+  .dash-grid{ grid-template-columns:1fr; }
+  .meter-name{ width:92px; font-size:11.5px; }
+}
