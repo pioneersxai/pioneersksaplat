@@ -21,6 +21,7 @@ var currentTask = null;
 var LIVE = false;
 var SERVER_TASKS = [];
 var chatHistory = [];   /* تاريخ الحوار الحالي (BE-P2) */
+var currentOutputId = null; /* مسودة المخرَج الجارية (المرحلة 4) */
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -196,6 +197,7 @@ function openTask(task) {
   document.getElementById('topTitle').textContent = txt[0];
   document.getElementById('messages').innerHTML = '';
   chatHistory = [];
+  currentOutputId = null;
   lockComposer(true);
 
   var intro = (state.lang === 'ar')
@@ -307,10 +309,12 @@ function submitForm(data) {
       .then(function (d) {
         if (d.ok && !d.demo && d.content) {
           chatHistory = d.history || [];
+          currentOutputId = d.outputId || null;
           var res = document.createElement('div');
           res.className = 'result-card';
           res.innerHTML = '<span class="tag">' + t('aiResultTag') + '</span><br>' + textToHtml(d.content);
-          aiMessage(t('sentForReview'), res);
+          aiMessage(t('draftReady'), res);
+          addSubmitBar();
           state.formDone = true;
           lockComposer(false);
         } else if (d.ok && d.demo) {
@@ -339,6 +343,42 @@ function demoResult(data) {
   lockComposer(false);
 }
 
+/* ================= دورة المخرَج (المرحلة 4): إرسال المسودة للمراجعة ================= */
+function addSubmitBar() {
+  if (!currentOutputId) return;
+  var m = document.getElementById('messages');
+  var bar = document.createElement('div');
+  bar.className = 'submit-bar';
+  bar.id = 'submitBar';
+  bar.innerHTML = '<small>' + t('draftNote') + '</small> ';
+  var btn = document.createElement('button');
+  btn.className = 'btn-submit-review';
+  btn.textContent = t('submitBtnReview');
+  btn.onclick = function () {
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    fetch('/api/outputs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit', id: currentOutputId })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) { btn.disabled = false; btn.textContent = t('submitBtnReview'); alert(t('subFail') + ' [' + (d.error || '?') + ']'); return; }
+        var msg;
+        if (d.status === 'Approved') msg = t('subAutoApproved');
+        else if (d.sampled) msg = t('subSampled');
+        else msg = t('subPending');
+        bar.innerHTML = '<b>' + msg + '</b>';
+        currentOutputId = null; /* لم تعد مسودة */
+      })
+      .catch(function () { btn.disabled = false; btn.textContent = t('submitBtnReview'); alert(t('subFail') + ' [network]'); });
+  };
+  bar.appendChild(btn);
+  m.appendChild(bar);
+  m.scrollTop = m.scrollHeight;
+}
+
 /* ================= Composer lock (part of UI-001 enforcement) ================= */
 function lockComposer(locked) {
   document.getElementById('composerInput').disabled = locked;
@@ -360,7 +400,7 @@ function userSend() {
     fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId: currentTask.id, messages: msgs })
+      body: JSON.stringify({ taskId: currentTask.id, messages: msgs, outputId: currentOutputId })
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
