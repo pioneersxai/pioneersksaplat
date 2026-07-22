@@ -8,7 +8,7 @@
 
    التعليمات (instructions) لا تغادر الخادم أبداً. 🔒
    ============================================================ */
-import { json, getUser } from './_utils.js';
+import { json, getUser, classifyCriticality } from './_utils.js';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const API_VERSION = '2023-06-01';       /* موثَّق رسمياً */
@@ -108,13 +108,30 @@ export async function onRequestPost({ request, env }) {
   }
   if (!content) return json({ error: 'ai_empty' }, 502);
 
-  /* ---------- حفظ المخرَج للمراجعة (أول توليد فقط) ---------- */
+  /* ---------- دورة المخرَج (المرحلة 4) ----------
+     أول توليد → مسودة Draft (مع تصنيف criticality آلي).
+     متابعة حوار بـ outputId → المسودة تُحدَّث لآخر نسخة —
+     الموظف يرسلها للمراجعة بزر «إرسال للمراجعة» (POST /api/outputs submit). */
   let outputId = null;
+  const outputType = (payload.output_type || (task.role === 'website' ? 'site-page' : 'doc'));
+  const cls = classifyCriticality(content, outputType);
+
   if (body.store) {
     const r = await env.DB.prepare(
-      'INSERT INTO outputs (employee_id, task_id, content, state) VALUES (?1, ?2, ?3, ?4)'
-    ).bind(user.id, task.id, content, 'pending').run();
+      'INSERT INTO outputs (employee_id, task_id, content, state, status, criticality, crit_reasons, output_type) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)'
+    ).bind(user.id, task.id, content, 'pending', 'Draft', cls.criticality, cls.reasons.join(' · ') || null, outputType).run();
     outputId = r.meta.last_row_id;
+  } else if (body.outputId) {
+    /* تحديث المسودة القائمة بآخر نسخة — للمالك نفسه وما دامت Draft */
+    const own = await env.DB.prepare(
+      "SELECT id FROM outputs WHERE id = ?1 AND employee_id = ?2 AND status = 'Draft'"
+    ).bind(body.outputId, user.id).first();
+    if (own) {
+      await env.DB.prepare(
+        'UPDATE outputs SET content = ?1, criticality = ?2, crit_reasons = ?3 WHERE id = ?4'
+      ).bind(content, cls.criticality, cls.reasons.join(' · ') || null, own.id).run();
+      outputId = own.id;
+    }
   }
 
   /* نعيد التاريخ كاملاً حتى تتابع الواجهة الحوار */
