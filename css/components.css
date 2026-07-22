@@ -204,3 +204,17 @@
   .task-card{ padding:16px 14px; }
   .lib-hero h3{ font-size:19px; }
 }
+
+/* دورة المخرَج (المرحلة 4) — شريط إرسال المسودة للمراجعة */
+.submit-bar{
+  margin:10px 44px 16px; padding:10px 14px;
+  border:1px dashed var(--brand-300, #999); border-radius:10px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:var(--accent-soft, rgba(0,0,0,.03));
+}
+.submit-bar small{ opacity:.8; }
+.btn-submit-review{
+  border:none; border-radius:8px; padding:8px 18px; cursor:pointer;
+  background:var(--brand-600, #0a7d6c); color:#fff; font-weight:700; font-family:inherit;
+}
+.btn-submit-review:disabled{ opacity:.6; cursor:default; }
