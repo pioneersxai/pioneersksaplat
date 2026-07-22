@@ -491,8 +491,30 @@ function buildEmpForm() {
       .catch(function () { msg.textContent = '✖ تعذر الاتصال'; });
   });
 }
+/* ================= Review queue — دورة المخرَج (المرحلة 4) ================= */
+var L_LIFECYCLE = null;
 
-/* ================= Review queue ================= */
+function renderLifecycle() {
+  var box = document.getElementById('lcStatus');
+  if (!box) return;
+  if (!ADMIN_LIVE || !L_LIFECYCLE) { box.textContent = '🔌 وضع تجريبي — لوحة الدورة تعمل في الوضع الحي فقط'; return; }
+  var lc = L_LIFECYCLE;
+  var html = '';
+  if (lc.phase === 'pre-golive') {
+    html = '🟠 <b>ما قبل Go-Live</b> — الوضع انتقالي إلزامياً: كل مخرَج يمر عليك (لا اعتماد آلي).';
+    document.getElementById('goLiveBtn').style.display = 'inline-block';
+  } else if (lc.phase === 'transition') {
+    html = '🟡 <b>الفترة الانتقالية سارية</b> — متبقٍ <b>' + lc.daysLeft + '</b> يوماً من ' + lc.days + '. كل مخرَج → مراجعتك إلزامياً.';
+  } else {
+    html = '🟢 <b>ما بعد الفترة الانتقالية</b> — critical يمر عليك دائماً · العادي يُعتمد آلياً مع عيّنة رقابية <b>' + Math.round(lc.rate * 100) + '%</b>.';
+  }
+  box.innerHTML = html;
+  var rw = document.getElementById('rateWrap');
+  rw.style.display = 'inline-block';
+  var ri = document.getElementById('rateInp');
+  if (ri && !ri.value) ri.value = lc.rate;
+}
+
 function renderReview() {
   var list = document.getElementById('reviewList');
   list.innerHTML = '';
@@ -501,41 +523,50 @@ function renderReview() {
 
   for (var i = 0; i < items.length; i++) {
     (function (item) {
-      var isPending = ADMIN_LIVE ? (item.state === 'pending') : !item.state;
+      var st = ADMIN_LIVE ? item.status : (item.state === 'ok' ? 'Approved' : (item.state === 'back' ? 'Rejected' : (!item.state ? 'Pending-Review' : 'Pending-Review')));
+      var isPending = (st === 'Pending-Review');
       if (isPending) pending++;
 
       var card = document.createElement('div');
       card.className = 'review-card' + (isPending ? '' : ' review-done');
 
       var stateHtml = '';
-      var st = ADMIN_LIVE ? item.state : (item.state === 'ok' ? 'approved' : (item.state === 'back' ? 'returned' : null));
-      if (st === 'approved') stateHtml = '<span class="review-state ok">✔ اعتُمد</span>';
-      if (st === 'returned') stateHtml = '<span class="review-state back">↩ أُعيد للموظف</span>';
+      if (st === 'Approved') stateHtml = '<span class="review-state ok">✔ Approved' + (item.reviewed_by ? ' · ' + esc(item.reviewed_by) : '') + '</span>';
+      if (st === 'Rejected') stateHtml = '<span class="review-state back">✖ Rejected — ' + esc(item.reject_reason || '') + '</span>';
+      if (st === 'Draft') stateHtml = '<span class="review-state">📝 Draft (لم يُرسَل بعد)</span>';
+
+      var critHtml = '';
+      if (ADMIN_LIVE && item.criticality === 'critical') {
+        critHtml = ' <span class="review-state back" title="' + esc(item.crit_reasons || '') + '">🔴 critical' + (item.crit_reasons ? ' — ' + esc(item.crit_reasons) : '') + '</span>';
+      }
+      if (ADMIN_LIVE && item.sampled) critHtml += ' <span class="review-state">🎲 عيّنة رقابية</span>';
 
       var emp = ADMIN_LIVE ? item.emp_name : item.emp;
       var taskLbl = ADMIN_LIVE ? item.task_id : item.task;
       var time = ADMIN_LIVE ? (item.created_at || '') : item.time;
 
       card.innerHTML =
-        '<div class="review-meta"><b>' + esc(emp) + '</b> · ' + esc(taskLbl) + ' · ' + esc(time) + ' ' + stateHtml + '</div>' +
+        '<div class="review-meta"><b>' + esc(emp) + '</b> · ' + esc(taskLbl) + ' · ' + esc(time) + ' ' + stateHtml + critHtml + '</div>' +
         '<div class="review-output">' + esc(ADMIN_LIVE ? item.content : item.output).replace(/\n/g, '<br>') + '</div>';
 
-      var actions = document.createElement('div');
-      actions.className = 'review-actions';
+      if (isPending) {
+        var actions = document.createElement('div');
+        actions.className = 'review-actions';
 
-      var ok = document.createElement('button');
-      ok.className = 'btn-ok';
-      ok.textContent = '✔ اعتماد';
-      ok.onclick = function () { decide(item, 'approved'); };
+        var ok = document.createElement('button');
+        ok.className = 'btn-ok';
+        ok.textContent = '✔ اعتماد';
+        ok.onclick = function () { decide(item, 'Approved'); };
 
-      var back = document.createElement('button');
-      back.className = 'btn-back';
-      back.textContent = '↩ إرجاع للتعديل';
-      back.onclick = function () { decide(item, 'returned'); };
+        var back = document.createElement('button');
+        back.className = 'btn-back';
+        back.textContent = '✖ رفض (بسبب)';
+        back.onclick = function () { decide(item, 'Rejected'); };
 
-      actions.appendChild(ok);
-      actions.appendChild(back);
-      card.appendChild(actions);
+        actions.appendChild(ok);
+        actions.appendChild(back);
+        card.appendChild(actions);
+      }
       list.appendChild(card);
     })(items[i]);
   }
@@ -549,23 +580,54 @@ function renderReview() {
   badge.style.display = pending ? 'inline-block' : 'none';
   var sp = document.getElementById('statPending');
   if (sp) sp.textContent = pending;
+  renderLifecycle();
 }
 
-function decide(item, state) {
+function decide(item, decision) {
   if (ADMIN_LIVE) {
+    var reason = '';
+    if (decision === 'Rejected') {
+      reason = (prompt('سبب الرفض (إلزامي — يصل للموظف):') || '').trim();
+      if (!reason) { alert('الرفض بلا سبب غير ممكن.'); return; }
+    }
     fetch('/api/outputs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'decide', id: item.id, state: state })
+      body: JSON.stringify({ action: 'decide', id: item.id, decision: decision, reason: reason })
     })
       .then(function (r) { return r.json(); })
-      .then(function (d) { if (d.ok) { item.state = state; renderReview(); } else alert('خطأ: ' + d.error); })
+      .then(function (d) {
+        if (d.ok) { loadOutputs(); }
+        else alert('خطأ: ' + (d.msg || d.error));
+      })
       .catch(function () { alert('تعذر الاتصال بالخادم'); });
     return;
   }
-  item.state = (state === 'approved') ? 'ok' : 'back';
+  item.state = (decision === 'Approved') ? 'ok' : 'back';
   renderReview();
 }
+
+/* أزرار لوحة الدورة */
+document.addEventListener('DOMContentLoaded', function () {
+  var gl = document.getElementById('goLiveBtn');
+  if (gl) gl.addEventListener('click', function () {
+    if (!confirm('🚀 تفعيل Go-Live الآن؟\n\nيبدأ عدّاد الفترة الانتقالية (كل مخرَج → مراجعتك إلزامياً طوالها). لا يمكن التراجع.')) return;
+    fetch('/api/outputs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'golive' })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) { if (d.ok) { alert('✅ Go-Live: ' + d.go_live_date); loadOutputs(); } else alert('خطأ: ' + (d.msg || d.error)); });
+  });
+  var rb = document.getElementById('rateBtn');
+  if (rb) rb.addEventListener('click', function () {
+    var v = document.getElementById('rateInp').value.trim();
+    fetch('/api/outputs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_setting', key: 'normal_sample_rate', value: v })
+    }).then(function (r) { return r.json(); })
+      .then(function (d) { if (d.ok) { alert('✅ حُفظت النسبة'); loadOutputs(); } else alert('خطأ: ' + (d.msg || d.error)); });
+  });
+});
 
 /* ================= تحميل البيانات الحية ================= */
 function loadTasks() {
@@ -583,7 +645,7 @@ function loadEmployees() {
 function loadOutputs() {
   return fetch('/api/outputs')
     .then(function (r) { return r.json(); })
-    .then(function (d) { if (d.ok) { L_OUTS = d.outputs; renderReview(); } });
+    .then(function (d) { if (d.ok) { L_OUTS = d.outputs; L_LIFECYCLE = d.lifecycle || null; renderReview(); } });
 }
 
 /* ============================================================
