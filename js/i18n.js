@@ -66,6 +66,11 @@ var STR = {
     subSampled: '📥 أُرسل المخرَج للمراجعة (اختير ضمن العيّنة الرقابية).',
     subAutoApproved: '✅ اعتُمد المخرَج آلياً (مخرَج عادي بعد الفترة الانتقالية).',
     subFail: 'تعذر الإرسال — حاول مرة أخرى',
+    dailyTitle: 'مهامي اليومية',
+    dailySub: 'مهام إلزامية يحدّدها المدير — يجب إرسال مخرَجها كل يوم',
+    deptTasksTitle: 'مهام قسمي',
+    dailyDoneBadge: 'أُنجزت اليوم',
+    dailyDueBadge: 'مطلوبة اليوم',
     aiError: 'تعذر إتمام الطلب — حاول مرة أخرى، وإن تكرر أبلغ الإدارة'
   },
 
@@ -130,6 +135,11 @@ var STR = {
     subSampled: '📥 Output sent for review (selected in the audit sample).',
     subAutoApproved: '✅ Output auto-approved (normal output after the transition period).',
     subFail: 'Submission failed — try again',
+    dailyTitle: 'My Daily Missions',
+    dailySub: 'Mandatory tasks set by management — an output must be submitted every day',
+    deptTasksTitle: 'My department tasks',
+    dailyDoneBadge: 'Done today',
+    dailyDueBadge: 'Due today',
     aiError: 'Request failed — try again, and report to management if it persists'
   }
 };
