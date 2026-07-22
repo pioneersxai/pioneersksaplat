@@ -66,11 +66,23 @@
         <h3 class="sec-title" style="margin:0">📊 اليوم <small id="dashDate" style="color:var(--text-2);font-weight:400"></small></h3>
         <button class="chip-btn" id="dashRefresh">⟳ تحديث</button>
       </div>
-      <div class="stat-grid kpi-row">
-        <div class="stat-tile"><span class="stat-num" id="kpiSub">—</span><span class="stat-lbl">مخرَجات أُرسلت اليوم</span></div>
-        <div class="stat-tile"><span class="stat-num" id="kpiApp">—</span><span class="stat-lbl">اعتُمدت اليوم</span></div>
-        <div class="stat-tile warn"><span class="stat-num" id="statPending">—</span><span class="stat-lbl">بانتظار مراجعتك الآن</span></div>
-        <div class="stat-tile"><span class="stat-num sm-num" id="kpiFast">—</span><span class="stat-lbl">⚡ أسرع مُنجز (7 أيام)</span></div>
+      <div class="kpi-row2">
+        <div class="kpi-tile">
+          <span class="kpi-ico">📤</span>
+          <span class="kpi-body"><b class="kpi-num" id="kpiSub">—</b><small>مخرَجات أُرسلت اليوم</small></span>
+        </div>
+        <div class="kpi-tile">
+          <span class="kpi-ico ok">✔</span>
+          <span class="kpi-body"><b class="kpi-num" id="kpiApp">—</b><small>اعتُمدت اليوم</small></span>
+        </div>
+        <div class="kpi-tile">
+          <span class="kpi-ico warn">⏳</span>
+          <span class="kpi-body"><b class="kpi-num" id="statPending">—</b><small>بانتظار مراجعتك الآن</small></span>
+        </div>
+        <div class="kpi-tile">
+          <span class="kpi-ico zap">⚡</span>
+          <span class="kpi-body"><b class="kpi-num kpi-txt" id="kpiFast">—</b><small>أسرع مُنجز — آخر 7 أيام</small></span>
+        </div>
       </div>
       <div class="meta-strip">مهام مفعّلة: <b id="statTasks">—</b> · أقسام: <b id="statRoles">—</b> · موظفون: <b id="statEmps">—</b></div>
 
