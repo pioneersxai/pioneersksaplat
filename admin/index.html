@@ -130,7 +130,17 @@
 
     <!-- ========== Review Queue ========== -->
     <section id="view-review" class="admin-view">
-      <p class="view-sub">مخرجات الموظفين بانتظار قرارك — لا يُعتمد أي مخرَج تلقائياً (مراجعة بشرية إلزامية).</p>
+      <p class="view-sub">دورة المخرَج: Draft ← Pending-Review ← Approved / Rejected (بسبب إلزامي) — لا تصدير لأي مخرَج غير معتمد.</p>
+
+      <!-- لوحة دورة الحياة (المرحلة 4) -->
+      <div class="panel" id="lifecyclePanel" style="margin-bottom:14px">
+        <div id="lcStatus">⏳ جارٍ قراءة وضع الدورة...</div>
+        <div class="lc-controls" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <button class="chip-btn" id="goLiveBtn" style="display:none">🚀 تفعيل Go-Live (يبدأ عدّاد الفترة الانتقالية)</button>
+          <label style="display:none" id="rateWrap">نسبة العيّنة الرقابية (0–1): <input id="rateInp" type="text" size="4" style="width:60px"> <button class="chip-btn" id="rateBtn">حفظ</button></label>
+        </div>
+      </div>
+
       <div id="reviewList"></div>
     </section>
 
